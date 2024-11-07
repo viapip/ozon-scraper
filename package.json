@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "ozon-scraper",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "yarn@4.5.1",
+  "description": "",
+  "author": "",
+  "license": "MIT",
+  "homepage": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": "",
+  "keywords": [],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./dist/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "pkgroll",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.cjs",
+    "release": "yarn publish",
+    "lint": "eslint --ext=ts,js,vue .",
+    "clean": "yarn exec rm -rf dist"
+  },
+  "dependencies": {
+    "esm": "^3.2.25",
+    "esno": "^4.8.0",
+    "level": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/esm": "^3.2.2",
+    "@types/levelup": "^5.1.5",
+    "@types/node": "^20.17.5",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@viapip/eslint-config": "^0.0.2",
+    "@yarnpkg/doctor": "^4.0.2",
+    "consola": "^3.2.3",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.4.5",
+    "eslint": "^9.14.0",
+    "jsonc-eslint-parser": "^2.4.0",
+    "lint-staged": "^15.2.10",
+    "pkgroll": "^2.5.1",
+    "playwright": "^1.48.2",
+    "puppeteer": "^22.0.0",
+    "simple-git-hooks": "^2.11.1",
+    "telegraf": "^4.16.3",
+    "tslib": "^2.8.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "yarn lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,js,vue}": "eslint --fix"
+  },
+  "dependenciesMeta": {
+    "@rollup/plugin-typescript@11.1.1": {
+      "unplugged": true
+    },
+    "rollup-plugin-esbuild@5.0.0": {
+      "unplugged": true
+    }
+  }
+}

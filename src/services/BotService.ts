@@ -1,0 +1,171 @@
+import { createConsola } from 'consola'
+import { Telegraf } from 'telegraf'
+
+import { formatPrice } from '../utils/helpers.js'
+
+import type { ProductAnalytics } from '../types/index.js'
+
+const logger = createConsola()
+  .withTag('BotService')
+
+export class BotService {
+  private bot: Telegraf
+  private chatIds: string[]
+  private isRunning = false
+  private batchSize: number
+
+  static readonly ITEM_SEPARATOR = '━━━━━━━━━━━━━━━━━━━━━━'
+
+  constructor(token: string, chatIds: string, batchSize?: number) {
+    logger.info('Bot service constructor')
+    if (!token) {
+      throw new Error('Telegram bot token is required')
+    }
+
+    this.bot = new Telegraf(token)
+    this.chatIds = chatIds.split(',')
+      .map(id => id.trim())
+
+    this.batchSize = batchSize || 10
+  }
+
+  async init(receiveProducts: () => Promise<ProductAnalytics[]>): Promise<void> {
+    try {
+      logger.info('Starting Telegram bot')
+
+      this.bot.command('getchatid', (ctx) => {
+        const chatId = ctx.chat.id
+        ctx.reply(`Ваш текущий chatId: ${chatId}`)
+      })
+
+      this.bot.command('getallproducts', async (ctx) => {
+        const products = await receiveProducts() as ProductAnalytics[]
+
+        await this.sendNotifications([ctx.chat.id.toString()], products, this.batchSize)
+      })
+
+      this.bot.launch(() => {
+        this.isRunning = true
+        logger.info('Telegram bot started')
+      })
+        .catch((error) => {
+          logger.error('Failed to start Telegram bot:', error)
+          this.isRunning = false
+        })
+
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+    catch (error) {
+      logger.error('Failed to initialize Telegram bot:', error)
+      throw error
+    }
+  }
+
+  async sendAnalytics(analyticsArray: ProductAnalytics[] | null): Promise<void> {
+    if (!this.isRunning) {
+      logger.warn('Bot is not running, skipping message')
+
+      return
+    }
+
+    if (!analyticsArray) {
+      logger.warn('No analytics data to send')
+      this.bot.telegram.sendMessage(this.chatIds[0], 'Нет данных для отправки')
+
+      return
+    }
+
+    if (analyticsArray.length === 0) {
+      logger.warn('No price changes to send')
+      this.bot.telegram.sendMessage(this.chatIds[0], 'Цены не изменились')
+
+      return
+    }
+    console.log(analyticsArray)
+    await this.sendNotifications(this.chatIds, analyticsArray, this.batchSize)
+  }
+
+  async sendNotifications(chatIds: string[], messages: ProductAnalytics[], batchSize: number) {
+    for (const chatId of chatIds) {
+      try {
+        await this.sendBatchedMessages(chatId, messages, batchSize)
+      }
+      catch (error) {
+        logger.error(`Failed to send message to chat ${chatId}:`, error)
+      }
+    }
+  }
+
+  private async sendBatchedMessages(chatId: string, messages: ProductAnalytics[], batchSize: number) {
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize)
+      const formattedMessages = batch.map(msg => this.formatAnalyticsMessage(msg))
+      const messageText = this.formatMessage(formattedMessages, i)
+
+      await this.sendTelegramMessage(chatId, messageText)
+    }
+  }
+
+  private async sendTelegramMessage(chatId: string, text: string) {
+    await this.bot.telegram.sendMessage(chatId, text, {
+      parse_mode: 'HTML',
+      link_preview_options: { is_disabled: true },
+    })
+  }
+
+  formatMessage(messages: string[], index: number): string {
+    const separator = '━━━━━━━━━━━━━━━━━━━━━━'
+
+    return index === 0
+      ? `${separator}
+      ${messages.join('')}`
+      : messages.join('')
+  }
+
+  formatPriceChange(change: number): string {
+    const absChange = Math.abs(change)
+    if (change === 0) {
+      return '0%'
+    }
+
+    return change > 0 ? `+${absChange}%` : `-${absChange}%`
+  }
+
+  private formatAnalyticsMessage(analytics: ProductAnalytics): string {
+    const { name, url, price: currentPrice } = analytics.current
+    const { price: minPrice } = analytics.minPrice
+    const { price: maxPrice } = analytics.maxPrice
+
+    const trend = this.getPriceTrendSymbol(analytics.priceDiffPercent)
+    const priceChangeFormatted = this.formatPriceChange(analytics.priceDiffPercent)
+    const productName = name.split(',')[0]
+
+    return `
+<b>${productName}</b>
+💵 <b>${formatPrice(currentPrice)}</b> 
+📈 <code>${trend} ${priceChangeFormatted}</code>
+ℹ️ Min/Max: <code>${formatPrice(minPrice)}/${formatPrice(maxPrice)}</code>
+<a href="${url}">Открыть в Ozon ➜</a>
+${BotService.ITEM_SEPARATOR}`
+  }
+
+  private getPriceTrendSymbol(priceDiff: number): string {
+    if (priceDiff === 0) {
+      return '→'
+    }
+
+    return priceDiff > 0 ? '↗' : '↘'
+  }
+
+  async stop(): Promise<void> {
+    if (this.isRunning) {
+      this.bot.stop()
+      this.isRunning = false
+      logger.info('Telegram bot stopped')
+    }
+  }
+
+  isReady(): boolean {
+    return this.isRunning
+  }
+}
