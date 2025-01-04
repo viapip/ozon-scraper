@@ -1,5 +1,5 @@
 export interface OzonConfig {
-  favoriteListUrl: string
+  // favoriteListUrl: string
   cookies: string
   userAgent: string
 }
@@ -23,4 +23,29 @@ export interface ProductAnalytics {
   maxPrice: PriceHistory
   current: Product
   priceDiffPercent: number
+}
+
+export interface ProductListUrl {
+  url: string
+  timestamp: number
+  chatId: string
+}
+export interface UserProduct {
+  id: string
+  url: string
+  addedAt: number
+  name?: string
+  lastCheckedAt?: number
+  // Можно добавить дополнительные поля
+}
+
+export interface UserProductAnalytics extends ProductAnalytics {
+  chatId: string
+}
+
+export interface User {
+  chatId: string
+  favoriteListUrl?: string
+  createdAt: number
+  lastActivityAt: number
 }

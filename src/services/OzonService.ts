@@ -6,7 +6,7 @@ import { chromium } from 'playwright'
 import { delay, getRandomDelay, parseCookieString, saveCookiesToFile } from '../utils/helpers.js'
 
 import type { OzonConfig, Product } from '../types/index.js'
-import type { Browser, Page } from 'playwright'
+import type { Browser, BrowserContext, Page } from 'playwright'
 
 const logger = createConsola()
 
@@ -37,6 +37,8 @@ const BROWSER_HEADERS = {
 
 export class OzonService {
   private browser: Browser | null = null
+  private context: BrowserContext | null = null
+  private page: Page | null = null
   private config: OzonConfig
 
   constructor(config: OzonConfig) {
@@ -48,14 +50,8 @@ export class OzonService {
       headless: true,
       args: BROWSER_ARGS,
     })
-  }
 
-  async getProducts(): Promise<Product[]> {
-    if (!this.browser) {
-      throw new Error('Browser not initialized')
-    }
-
-    const context = await this.browser.newContext({
+    this.context = await this.browser.newContext({
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 1,
@@ -68,7 +64,7 @@ export class OzonService {
       extraHTTPHeaders: BROWSER_HEADERS,
     })
 
-    await context.addInitScript(() => {
+    await this.context.addInitScript(() => {
       // Re webdriver
       Object.defineProperty(navigator, 'webdriver', { get: () => null })
 
@@ -120,60 +116,75 @@ export class OzonService {
       }
     })
 
-    const page = await context.newPage()
+    const parsedCookies = parseCookieString(this.config.cookies)
+    await this.context.addCookies(parsedCookies)
+
+    logger.info('Cookies successfully set from file')
+
+    this.page = await this.context.newPage()
+
+    await this.preloadActions(this.page)
+
+    // Set pageViewId
+    // await this.page.evaluate(() => {
+    //   localStorage.setItem('TSDK:https://www.ozon.ru/', JSON.stringify({ pageViewId: '42c9a4e2-f9cb-47b6-9cf6-6ffa516ef91d', pageType: 'home' }))
+    // })
+  }
+
+  async getProducts(favoriteListUrl: string): Promise<Product[]> {
+    if (!this.browser) {
+      throw new Error('Browser not initialized')
+    }
+
+    if (!this.page) {
+      throw new Error('Page not initialized')
+    }
+
+    if (!this.context) {
+      throw new Error('Context not initialized')
+    }
 
     try {
-      const parsedCookies = parseCookieString(this.config.cookies)
-      await context.addCookies(parsedCookies)
-      logger.info('Cookies successfully set from file')
-
-      await this.preloadActions(page)
-
-      // Set pageViewId
-      await page.evaluate(() => {
-        localStorage.setItem('TSDK:https://www.ozon.ru/', JSON.stringify({ pageViewId: '42c9a4e2-f9cb-47b6-9cf6-6ffa516ef91d', pageType: 'home' }))
-      })
-
-      await page.goto(this.config.favoriteListUrl, {
+      await this.page.goto(favoriteListUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 30000,
       })
 
       // Wait for challenge
       const challengeSelector = '.container'
-      await page.waitForSelector(challengeSelector, { timeout: 10000 })
+      await this.page.waitForSelector(challengeSelector, { timeout: 10000 })
 
       // Click reload button
-      const reloadButton = await page.$('#reload-button')
+      const reloadButton = await this.page.$('#reload-button')
       if (reloadButton) {
         logger.info('Detected reload button, clicking...')
-        await this.simulateHumanBehavior(page)
+        await this.simulateHumanBehavior(this.page)
         await delay(getRandomDelay(1000, 2000))
         await reloadButton.click()
       }
 
       // Check for access restriction
-      if ((await page.content()).includes('Доступ ограничен')) {
+      if ((await this.page.content()).includes('Доступ ограничен')) {
         logger.info('Access restricted, exiting...')
         throw new Error('Access restricted')
       }
 
       logger.info('Waiting for main content to load...')
-      await page.waitForSelector('[data-widget="searchResultsV2"]', {
+      await this.page.waitForSelector('[data-widget="searchResultsV2"]', {
         timeout: 30000,
         state: 'visible',
       })
 
       // Simulate human behavior
-      await this.simulateHumanBehavior(page)
+      await this.simulateHumanBehavior(this.page)
 
       logger.info('Scrolling page...')
-      await this.smoothScrollToBottom(page)
+      await this.smoothScrollToBottom(this.page)
 
       logger.info('Extracting products...')
-      const products = await this.extractProducts(page)
+      const products = await this.extractProducts(this.page)
 
-      const cookies = await context.cookies()
+      const cookies = await this.context.cookies()
       await saveCookiesToFile('.cookies', cookies)
       logger.info('New cookies successfully saved to file')
 
@@ -181,12 +192,11 @@ export class OzonService {
     }
     catch (error) {
       logger.error('Error loading page:', error)
-      await page.screenshot({ path: 'reports/error-screenshot.png', fullPage: true })
-      fs.writeFileSync('reports/error-page.html', await page.content())
+      if (this.page) {
+        await this.page.screenshot({ path: 'reports/error-screenshot.png', fullPage: true })
+        fs.writeFileSync('reports/error-page.html', await this.page.content())
+      }
       throw error
-    }
-    finally {
-      await context.close()
     }
   }
 
@@ -281,8 +291,22 @@ export class OzonService {
   }
 
   async close(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close()
+    try {
+      if (this.page) {
+        await this.page.close()
+        this.page = null
+      }
+      if (this.context) {
+        await this.context.close()
+        this.context = null
+      }
+      if (this.browser) {
+        await this.browser.close()
+        this.browser = null
+      }
+    }
+    catch (error) {
+      logger.error('Error during cleanup:', error)
     }
   }
 }

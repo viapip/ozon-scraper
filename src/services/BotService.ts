@@ -3,46 +3,121 @@ import { Telegraf } from 'telegraf'
 
 import { formatPrice } from '../utils/helpers.js'
 
-import type { ProductAnalytics } from '../types/index.js'
+import type { ProductAnalytics, User } from '../types/index.js'
+import type { Context } from 'telegraf'
 
 const logger = createConsola()
   .withTag('BotService')
 
+export interface BotServiceDependencies {
+  getProducts: () => Promise<ProductAnalytics[]>
+  clearUserProducts: (chatId: string) => Promise<void>
+  addUser: (chatId: string) => Promise<void>
+  setFavoriteList: (chatId: string, url: string) => Promise<void>
+  stop: (chatId: string) => Promise<void>
+  getUser: (chatId: string) => Promise<User | null>
+}
+
 export class BotService {
   private bot: Telegraf
-  private chatIds: string[]
   private isRunning = false
   private batchSize: number
+  private dependencies: BotServiceDependencies
 
   static readonly ITEM_SEPARATOR = '━━━━━━━━━━━━━━━━━━━━━━'
 
-  constructor(token: string, chatIds: string, batchSize?: number) {
+  constructor(
+    token: string,
+    dependencies: BotServiceDependencies,
+    batchSize?: number,
+  ) {
     logger.info('Bot service constructor')
     if (!token) {
       throw new Error('Telegram bot token is required')
     }
 
     this.bot = new Telegraf(token)
-    this.chatIds = chatIds.split(',')
-      .map(id => id.trim())
 
     this.batchSize = batchSize || 10
+    this.dependencies = dependencies
   }
 
-  async init(receiveProducts: () => Promise<ProductAnalytics[]>): Promise<void> {
+  async isUserExists(ctx: Context) {
+    try {
+      if (!ctx.chat) {
+        throw new Error('Chat not found')
+      }
+
+      const user = await this.dependencies.getUser(ctx.chat.id.toString())
+
+      return Boolean(user)
+    }
+    catch (error) {
+      logger.error('Failed to check if user exists:', error)
+
+      await ctx.reply('User not found')
+
+      return false
+    }
+  }
+
+  async initCommands(): Promise<void> {
+    this.bot.command('getchatid', (ctx) => {
+      const chatId = ctx.chat.id
+      ctx.reply(`Your current chatId: ${chatId}`)
+    })
+
+    this.bot.command('getallproducts', async (ctx) => {
+      if (!await this.isUserExists(ctx)) {
+        return
+      }
+
+      const products = await this.dependencies.getProducts()
+      await this.sendNotifications([ctx.chat.id.toString()], products, this.batchSize)
+    })
+
+    this.bot.command('addfavorite', async (ctx) => {
+      if (!await this.isUserExists(ctx)) {
+        return
+      }
+
+      const [, url] = ctx.message.text.split(' ')
+
+      await this.dependencies.setFavoriteList(ctx.chat.id.toString(), url)
+      ctx.reply(`Favorite list added`)
+    })
+
+    this.bot.command('adduser', async (ctx) => {
+      if (!await this.isUserExists(ctx)) {
+        return
+      }
+
+      const [, user] = ctx.message.text.split(' ')
+      if (!user) {
+        ctx.reply('User not specified')
+
+        return
+      }
+
+      await this.dependencies.addUser(user)
+      ctx.reply(`User ${user} added`)
+    })
+
+    this.bot.command('clear', async (ctx) => {
+      if (!await this.isUserExists(ctx)) {
+        return
+      }
+
+      await this.dependencies.clearUserProducts(ctx.chat.id.toString())
+      ctx.reply('Products list cleared')
+    })
+  }
+
+  async init(): Promise<void> {
     try {
       logger.info('Starting Telegram bot')
 
-      this.bot.command('getchatid', (ctx) => {
-        const chatId = ctx.chat.id
-        ctx.reply(`Ваш текущий chatId: ${chatId}`)
-      })
-
-      this.bot.command('getallproducts', async (ctx) => {
-        const products = await receiveProducts() as ProductAnalytics[]
-
-        await this.sendNotifications([ctx.chat.id.toString()], products, this.batchSize)
-      })
+      await this.initCommands()
 
       this.bot.launch(() => {
         this.isRunning = true
@@ -61,7 +136,7 @@ export class BotService {
     }
   }
 
-  async sendAnalytics(analyticsArray: ProductAnalytics[] | null): Promise<void> {
+  async sendAnalytics(chatId: string, analyticsArray: ProductAnalytics[] | null): Promise<void> {
     if (!this.isRunning) {
       logger.warn('Bot is not running, skipping message')
 
@@ -70,19 +145,19 @@ export class BotService {
 
     if (!analyticsArray) {
       logger.warn('No analytics data to send')
-      this.bot.telegram.sendMessage(this.chatIds[0], 'Нет данных для отправки')
+      this.bot.telegram.sendMessage(chatId, 'No data to send')
 
       return
     }
 
     if (analyticsArray.length === 0) {
       logger.warn('No price changes to send')
-      this.bot.telegram.sendMessage(this.chatIds[0], 'Цены не изменились')
+      this.bot.telegram.sendMessage(chatId, 'Prices did not change')
 
       return
     }
-    console.log(analyticsArray)
-    await this.sendNotifications(this.chatIds, analyticsArray, this.batchSize)
+
+    await this.sendNotifications([chatId], analyticsArray, this.batchSize)
   }
 
   async sendNotifications(chatIds: string[], messages: ProductAnalytics[], batchSize: number) {
@@ -138,7 +213,7 @@ export class BotService {
 
     const trend = this.getPriceTrendSymbol(analytics.priceDiffPercent)
     const priceChangeFormatted = this.formatPriceChange(analytics.priceDiffPercent)
-    const productName = name.split(',')[0]
+    const [productName, ..._args] = name.split(',')
 
     return `
 <b>${productName}</b>

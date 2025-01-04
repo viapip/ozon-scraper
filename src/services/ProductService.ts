@@ -3,16 +3,17 @@ import { subMonths } from 'date-fns'
 
 import { StorageService } from './StorageService.js'
 
-import type { PriceHistory, Product } from '../types/index.js'
+import type { PriceHistory, Product, UserProduct } from '../types/index.js'
 
 const logger = consola.withTag('ProductService')
 export class ProductService {
   private static readonly PRODUCT_PREFIX = 'product:'
   private static readonly HISTORY_PREFIX = 'history:'
+  private static readonly USER_PRODUCT_PREFIX = 'user_product:'
   private readonly storageService: StorageService<Product | PriceHistory>
 
   constructor() {
-    this.storageService = new StorageService<Product | PriceHistory>('db')
+    this.storageService = new StorageService<Product | PriceHistory >('db/products')
   }
 
   async getProduct(productId: string): Promise<Product | null> {

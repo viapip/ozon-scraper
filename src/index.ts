@@ -3,13 +3,18 @@ import process from 'node:process'
 import { createConsola } from 'consola'
 import dotenv from 'dotenv'
 
+import json from '../test-product.json'
+
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { BotService } from './services/BotService.js'
 import { OzonService } from './services/OzonService.js'
 import { ProductService } from './services/ProductService.js'
 import { SchedulerService } from './services/SchedulerService.js'
+import { UserProductListService } from './services/UserProductListService.js'
+import { UserService } from './services/UserService.js'
 import { readCookiesFromFile } from './utils/helpers.js'
 
+import type { BotServiceDependencies } from './services/BotService.js'
 import type { Product, ProductAnalytics } from './types/index.js'
 
 const logger = createConsola()
@@ -22,7 +27,7 @@ interface AppConfig {
   }
   telegram: {
     botToken: string
-    chatIds: string
+    adminChatId: string
   }
 }
 
@@ -34,7 +39,7 @@ function validateConfig(): AppConfig {
     },
     telegram: {
       botToken: process.env.TELEGRAM_BOT_TOKEN || '',
-      chatIds: process.env.TELEGRAM_CHAT_IDS || '',
+      adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || '',
     },
   }
 
@@ -44,8 +49,8 @@ function validateConfig(): AppConfig {
   if (!config.telegram.botToken) {
     throw new Error('TELEGRAM_BOT_TOKEN is required in environment variables')
   }
-  if (!config.telegram.chatIds) {
-    throw new Error('TELEGRAM_CHAT_IDS is required in environment variables')
+  if (!config.telegram.adminChatId) {
+    throw new Error('TELEGRAM_ADMIN_CHAT_ID is required in environment variables')
   }
 
   return config
@@ -69,24 +74,57 @@ class AppServices {
 async function initializeServices(config: AppConfig): Promise<AppServices> {
   const productService = new ProductService()
   const analyticsService = new AnalyticsService(productService)
+  const userService = new UserService()
   logger.info('Product services initialized')
 
-  const botService = new BotService(config.telegram.botToken, config.telegram.chatIds)
+  await userService.createUser(config.telegram.adminChatId)
+  logger.info('Admin user created')
+  const botDependencies: BotServiceDependencies = {
+    getProducts: async () => {
+      const products = await productService.getAllProducts()
+
+      return getAnalyticsProducts(products, productService, analyticsService)
+    },
+
+    clearUserProducts: async (chatId: string) => {
+      logger.info(`Clearing user products for chat ${chatId}`)
+      // await userProductListService.clearUserProductList(chatId)
+    },
+
+    addUser: async (chatId: string) => {
+      logger.info('Starting bot')
+      await userService.createUser(chatId)
+    },
+
+    getUser: async (chatId: string) => await userService.getUser(chatId),
+
+    setFavoriteList: async (chatId: string, url: string) => {
+      logger.info(`Adding favorite list for chat ${chatId}`)
+      await userService.setFavoriteList(chatId, url)
+    },
+
+    stop: async (chatId: string) => {
+      logger.info('Cancelling bot')
+      await userService.removeFavoriteList(chatId)
+    },
+  }
+
+  const botService = new BotService(
+    config.telegram.botToken,
+    botDependencies,
+  )
 
   const checkProductsHandler = createCheckProductsHandler(
     productService,
     analyticsService,
     botService,
+    userService,
     config,
   )
 
   const scheduler = new SchedulerService(checkProductsHandler)
 
-  await botService.init(async () => {
-    const products = await productService.getAllProducts()
-
-    return getAnalyticsProducts(products, productService, analyticsService)
-  })
+  await botService.init()
 
   return new AppServices(productService, analyticsService, botService, scheduler)
 }
@@ -95,31 +133,46 @@ function createCheckProductsHandler(
   productService: ProductService,
   analyticsService: AnalyticsService,
   botService: BotService,
+  userService: UserService,
   config: AppConfig,
 ) {
   return async () => {
     try {
       const cookies = await readCookiesFromFile('.cookies')
       const ozonService = new OzonService({
-        favoriteListUrl: config.ozon.favoriteListUrl,
+        // favoriteListUrl: config.ozon.favoriteListUrl,
         cookies,
         userAgent: config.ozon.userAgent,
       })
 
-      await ozonService.init()
-      const products = await ozonService.getProducts()
-      logger.info(`Found products: ${products.length}`)
+      const users = await userService.getAllUsers()
+      logger.info(`Found users: ${users.length}`)
+      for (const user of users) {
+        const { favoriteListUrl, chatId } = user
+        logger.info(`User: ${chatId}`)
+        if (!favoriteListUrl) {
+          logger.info(`User ${chatId} has no favorite list`)
+          continue
+        }
 
-      const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
-      const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0)
+        // await ozonService.init()
+        // const products = await ozonService.getProducts(favoriteListUrl)
+        // logger.info(`Found products: ${products.length}`)
 
-      logger.info(`Discounted products: ${discountedProducts.length}`)
+        const products = json as Product[]
+        logger.info(`Found products: ${products.length}`)
 
-      if (discountedProducts.length > 0) {
-        await botService.sendAnalytics(discountedProducts)
+        const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
+        const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0)
+
+        logger.info(`Discounted products for ${chatId}: ${discountedProducts.length}`)
+
+        if (discountedProducts.length > 0) {
+          await botService.sendAnalytics(chatId, discountedProducts)
+        }
+
+        await ozonService.close()
       }
-
-      await ozonService.close()
     }
     catch (error) {
       logger.error('Error during products check:', error)
