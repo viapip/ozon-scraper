@@ -10,12 +10,13 @@ const logger = createConsola()
   .withTag('BotService')
 
 export interface BotServiceDependencies {
-  getProducts: () => Promise<ProductAnalytics[]>
+  getProducts: (chatId: string) => Promise<ProductAnalytics[]>
   clearUserProducts: (chatId: string) => Promise<void>
   addUser: (chatId: string) => Promise<void>
   setFavoriteList: (chatId: string, url: string) => Promise<void>
   stop: (chatId: string) => Promise<void>
   getUser: (chatId: string) => Promise<User | null>
+  setActive: (chatId: string, isActive: boolean) => Promise<void>
 }
 
 export class BotService {
@@ -62,21 +63,27 @@ export class BotService {
   }
 
   async initCommands(): Promise<void> {
-    this.bot.command('getchatid', (ctx) => {
+    this.bot.command('getid', (ctx) => {
       const chatId = ctx.chat.id
       ctx.reply(`Your current chatId: ${chatId}`)
     })
 
-    this.bot.command('getallproducts', async (ctx) => {
+    this.bot.command('getall', async (ctx) => {
       if (!await this.isUserExists(ctx)) {
         return
       }
 
-      const products = await this.dependencies.getProducts()
+      const products = await this.dependencies.getProducts(ctx.chat.id.toString())
+      if (products.length === 0) {
+        ctx.reply('No products found')
+
+        return
+      }
+
       await this.sendNotifications([ctx.chat.id.toString()], products, this.batchSize)
     })
 
-    this.bot.command('addfavorite', async (ctx) => {
+    this.bot.command('addlist', async (ctx) => {
       if (!await this.isUserExists(ctx)) {
         return
       }
@@ -92,24 +99,38 @@ export class BotService {
         return
       }
 
-      const [, user] = ctx.message.text.split(' ')
-      if (!user) {
+      const [, userId] = ctx.message.text.split(' ')
+      if (!userId) {
         ctx.reply('User not specified')
 
         return
       }
+      const user = await this.dependencies.getUser(userId)
 
-      await this.dependencies.addUser(user)
-      ctx.reply(`User ${user} added`)
+      if (!user) {
+        ctx.reply('User not found')
+
+        return
+      }
+
+      try {
+        await this.dependencies.setActive(userId, true)
+        await this.bot.telegram.sendMessage(userId, '🎉 You are updated status to active')
+        ctx.reply(`User ${userId} updated status to active`)
+      }
+      catch (error) {
+        logger.error(`Failed to add user ${userId}:`, error)
+        ctx.reply('Failed to add user')
+      }
     })
 
-    this.bot.command('clear', async (ctx) => {
+    this.bot.command('stop', async (ctx) => {
       if (!await this.isUserExists(ctx)) {
         return
       }
 
-      await this.dependencies.clearUserProducts(ctx.chat.id.toString())
-      ctx.reply('Products list cleared')
+      await this.dependencies.stop(ctx.chat.id.toString())
+      ctx.reply('🛑 Stopped')
     })
   }
 

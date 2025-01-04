@@ -30,14 +30,6 @@ export interface ProductListUrl {
   timestamp: number
   chatId: string
 }
-export interface UserProduct {
-  id: string
-  url: string
-  addedAt: number
-  name?: string
-  lastCheckedAt?: number
-  // Можно добавить дополнительные поля
-}
 
 export interface UserProductAnalytics extends ProductAnalytics {
   chatId: string
@@ -48,4 +40,6 @@ export interface User {
   favoriteListUrl?: string
   createdAt: number
   lastActivityAt: number
+  isActive: boolean
+  products: string[]
 }

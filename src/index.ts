@@ -77,23 +77,32 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
   const userService = new UserService()
   logger.info('Product services initialized')
 
-  await userService.createUser(config.telegram.adminChatId)
-  logger.info('Admin user created')
+  const adminUser = await userService.getUser(config.telegram.adminChatId)
+  if (!adminUser) {
+    await userService.createUser(config.telegram.adminChatId)
+    logger.info('Admin user created')
+  }
+
   const botDependencies: BotServiceDependencies = {
-    getProducts: async () => {
-      const products = await productService.getAllProducts()
+    getProducts: async (chatId: string) => {
+      const userProducts = await userService.getUserProducts(chatId)
+      const products = await productService.getProductsByIds(userProducts)
 
       return getAnalyticsProducts(products, productService, analyticsService)
     },
 
     clearUserProducts: async (chatId: string) => {
       logger.info(`Clearing user products for chat ${chatId}`)
-      // await userProductListService.clearUserProductList(chatId)
     },
 
     addUser: async (chatId: string) => {
       logger.info('Starting bot')
       await userService.createUser(chatId)
+    },
+
+    setActive: async (chatId: string, isActive: boolean) => {
+      logger.info(`Setting active status for chat ${chatId} to ${isActive}`)
+      await userService.setActive(chatId, isActive)
     },
 
     getUser: async (chatId: string) => await userService.getUser(chatId),
@@ -137,10 +146,11 @@ function createCheckProductsHandler(
   config: AppConfig,
 ) {
   return async () => {
+    let ozonService: OzonService | null = null
+
     try {
       const cookies = await readCookiesFromFile('.cookies')
-      const ozonService = new OzonService({
-        // favoriteListUrl: config.ozon.favoriteListUrl,
+      ozonService = new OzonService({
         cookies,
         userAgent: config.ozon.userAgent,
       })
@@ -152,7 +162,7 @@ function createCheckProductsHandler(
         logger.info(`User: ${chatId}`)
         if (!favoriteListUrl) {
           logger.info(`User ${chatId} has no favorite list`)
-          continue
+          // continue
         }
 
         // await ozonService.init()
@@ -163,6 +173,10 @@ function createCheckProductsHandler(
         logger.info(`Found products: ${products.length}`)
 
         const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
+
+        await userService.updateUserProducts(chatId, products.map(product => product.id))
+
+        // console.log(JSON.stringify(analyticsArray, null, 2))
         const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0)
 
         logger.info(`Discounted products for ${chatId}: ${discountedProducts.length}`)
@@ -177,6 +191,11 @@ function createCheckProductsHandler(
     catch (error) {
       logger.error('Error during products check:', error)
       // throw error
+    }
+    finally {
+      if (ozonService) {
+        await ozonService.close()
+      }
     }
   }
 }

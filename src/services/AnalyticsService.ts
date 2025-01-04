@@ -19,17 +19,18 @@ export class AnalyticsService {
 
     const minPriceItem = this.findExtremePrice(history, 'min')
     const maxPriceItem = this.findExtremePrice(history, 'max')
-    const currentPrice = history[history.length - 2] || product
-    const priceDiffPercent = this.calculatePriceChange(currentPrice.price, product.price)
+
+    const prevPrice = history[history.length - 2] || product
+    const priceDiffPercent = this.calculatePriceChange(product.price, prevPrice.price)
     if (priceDiffPercent !== 0) {
-      logger.info('priceDiffPercent', product.name, priceDiffPercent)
+      logger.info('priceDiffPercent', product.name, priceDiffPercent, JSON.stringify(prevPrice, null, 2))
     }
 
     return {
       minPrice: minPriceItem,
       maxPrice: maxPriceItem,
       current: product,
-      priceDiffPercent: this.calculatePriceChange(currentPrice.price, product.price),
+      priceDiffPercent,
     }
   }
 

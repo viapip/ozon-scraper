@@ -33,6 +33,8 @@ export class UserService {
         chatId,
         createdAt: Date.now(),
         lastActivityAt: Date.now(),
+        isActive: false,
+        products: [],
       }
 
       await this.storageService.saveItem(key, user)
@@ -83,6 +85,20 @@ export class UserService {
       logger.error(`Failed to update user ${chatId}:`, error)
       throw error
     }
+  }
+
+  async updateUserProducts(chatId: string, products: string[]): Promise<User | null> {
+    return this.updateUser(chatId, { products })
+  }
+
+  async getUserProducts(chatId: string): Promise<string[]> {
+    const user = await this.getUser(chatId)
+
+    return user?.products || []
+  }
+
+  async setActive(chatId: string, isActive: boolean): Promise<User | null> {
+    return this.updateUser(chatId, { isActive })
   }
 
   async setFavoriteList(chatId: string, listUrl: string): Promise<User | null> {
