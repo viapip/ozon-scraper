@@ -123,12 +123,12 @@ export class OzonService {
 
     this.page = await this.context.newPage()
 
-    await this.preloadActions(this.page)
-
     // Set pageViewId
     // await this.page.evaluate(() => {
     //   localStorage.setItem('TSDK:https://www.ozon.ru/', JSON.stringify({ pageViewId: '42c9a4e2-f9cb-47b6-9cf6-6ffa516ef91d', pageType: 'home' }))
     // })
+
+    await this.preloadActions(this.page)
   }
 
   // example https://ozon.ru/t/KoOMPQL forwarded to url https://www.ozon.ru/my/favorites/shared?list=QqweASdsaWwg and get query param list
@@ -137,17 +137,14 @@ export class OzonService {
       throw new Error('Page not initialized')
     }
 
-    // Переходим по ссылке и ждем всех редиректов
     await this.page.goto(favoriteListUrl, {
       waitUntil: 'domcontentloaded',
       timeout: 30000,
     })
 
-    // Получаем финальный URL после всех редиректов
     const finalUrl = this.page.url()
     const url = new URL(finalUrl)
 
-    // Получаем ID из параметра list
     const listId = url.searchParams.get('list')
 
     if (!listId) {
@@ -176,24 +173,7 @@ export class OzonService {
         timeout: 15000,
       })
 
-      // Wait for challenge
-      const challengeSelector = '.container'
-      await this.page.waitForSelector(challengeSelector, { timeout: 10000 })
-
-      // Click reload button
-      const reloadButton = await this.page.$('#reload-button')
-      if (reloadButton) {
-        logger.info('Detected reload button, clicking...')
-        await this.simulateHumanBehavior(this.page)
-        await delay(getRandomDelay(1000, 2000))
-        await reloadButton.click()
-      }
-
-      // Check for access restriction
-      if ((await this.page.content()).includes('Доступ ограничен')) {
-        logger.info('Access restricted, exiting...')
-        throw new Error('Access restricted')
-      }
+      await this.handleAccessRestriction(this.page)
 
       logger.info('Waiting for main content to load...')
       await this.page.waitForSelector('[data-widget="searchResultsV2"]', {
@@ -233,6 +213,34 @@ export class OzonService {
       await page.goto(url, { waitUntil: 'domcontentloaded' })
       await delay(getRandomDelay(1000, 2000))
       await this.simulateHumanBehavior(page)
+
+      await this.handleAccessRestriction(page)
+    }
+  }
+
+  private async handleAccessRestriction(page: Page): Promise<void> {
+    // Wait for challenge
+    const challengeSelector = '.container'
+    try {
+      await page.waitForSelector(challengeSelector, { timeout: 10000 })
+
+      // Click reload button
+      const reloadButton = await page.$('#reload-button')
+      if (reloadButton) {
+        logger.info('Detected reload button, clicking...')
+        await this.simulateHumanBehavior(page)
+        await delay(getRandomDelay(1000, 2000))
+        await reloadButton.click()
+      }
+
+      // Check for access restriction
+      if ((await page.content()).includes('Доступ ограничен')) {
+        logger.info('Access restricted, exiting...')
+        throw new Error('Access restricted')
+      }
+    }
+    catch (error) {
+      logger.warn('No challenge or restriction detected:', error)
     }
   }
 
@@ -269,16 +277,22 @@ export class OzonService {
 
   private async extractProducts(page: Page): Promise<Product[]> {
     return await page.$$eval('.widget-search-result-container .tile-root', elements => elements.map((item) => {
-      const priceElement = item.querySelector('.c3019-a1.tsHeadline500Medium')
+      const productLinks = Array.from(item.querySelectorAll('a[href*="/product/"]'))
+      const mainProductLink = productLinks[productLinks.length - 1] as HTMLAnchorElement
 
-      const nameElement = item.querySelector('.x2.x7.x9 .tsBody500Medium')
+      const nameElement = mainProductLink?.querySelector('span')
 
-      const linkElement = item.querySelector('a[href*="/product/"]') as HTMLAnchorElement
-
-      const url = linkElement?.href || ''
+      const url = mainProductLink?.getAttribute('href') || ''
       const id = url.match(/\/product\/([^/?]+)/)?.[1] || ''
 
-      const priceText = priceElement?.textContent || '0'
+      const allTextElements = Array.from(item.querySelectorAll('*'))
+      const priceElements = allTextElements.filter((el) => {
+        const text = el.textContent?.trim() || ''
+
+        return (/^\d[\d\s]*₽$/).test(text)
+      })
+
+      const priceText = priceElements[0]?.textContent || '0 ₽'
       const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
 
       return {
@@ -293,27 +307,34 @@ export class OzonService {
   }
 
   private async smoothScrollToBottom(page: Page): Promise<void> {
-    const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight)
-    let currentPosition = 0
+    const footerSelector = '[data-widget="footer"]'
+    let isFooterVisible = false
 
-    while (currentPosition < scrollHeight) {
-      // Случайная величина прокрутки от 100 до 300 пикселей
-      const scrollStep = Math.floor(Math.random() * (300 - 100 + 1)) + 100
-      currentPosition += scrollStep
+    while (!isFooterVisible) {
+      const scrollStep = Math.floor(Math.random() * (500 - 300 + 1)) + 300
 
-      await page.evaluate((position) => {
-        window.scrollTo({
-          top: position,
+      await page.evaluate((step) => {
+        window.scrollBy({
+          top: step,
           behavior: 'smooth',
         })
-      }, currentPosition)
+      }, scrollStep)
 
-      // Случайная задержка между прокрутками от 500 до 1500 мс
-      await delay(Math.floor(Math.random() * (1500 - 500 + 1)) + 500)
+      isFooterVisible = await page.evaluate((selector) => {
+        const footer = document.querySelector(selector)
+        if (!footer) {
+          return false
+        }
+
+        const rect = footer.getBoundingClientRect()
+
+        return rect.top <= window.innerHeight
+      }, footerSelector)
+
+      await delay(Math.floor(Math.random() * (1000 - 600 + 1)) + 200)
     }
 
-    // Небольшая задержка после достижения конца страницы
-    await delay(1000)
+    await delay(500)
   }
 
   async close(): Promise<void> {

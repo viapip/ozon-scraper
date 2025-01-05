@@ -23,7 +23,7 @@ export class AnalyticsService {
     const prevPrice = history[history.length - 2] || product
     const priceDiffPercent = this.calculatePriceChange(product.price, prevPrice.price)
     if (priceDiffPercent !== 0) {
-      logger.info('priceDiffPercent', product.name, priceDiffPercent, JSON.stringify(prevPrice, null, 2))
+      logger.info('priceDiffPercent', product.name, priceDiffPercent, JSON.stringify(product, null, 2))
     }
 
     return {
