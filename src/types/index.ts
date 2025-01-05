@@ -37,7 +37,7 @@ export interface UserProductAnalytics extends ProductAnalytics {
 
 export interface User {
   chatId: string
-  favoriteListUrl?: string
+  favoriteListId?: string
   createdAt: number
   lastActivityAt: number
   isActive: boolean

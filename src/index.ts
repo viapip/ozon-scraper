@@ -10,7 +10,6 @@ import { BotService } from './services/BotService.js'
 import { OzonService } from './services/OzonService.js'
 import { ProductService } from './services/ProductService.js'
 import { SchedulerService } from './services/SchedulerService.js'
-import { UserProductListService } from './services/UserProductListService.js'
 import { UserService } from './services/UserService.js'
 import { readCookiesFromFile } from './utils/helpers.js'
 
@@ -83,6 +82,11 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
     logger.info('Admin user created')
   }
 
+  const ozonService = new OzonService({
+    cookies: await readCookiesFromFile('.cookies'),
+    userAgent: config.ozon.userAgent,
+  })
+
   const botDependencies: BotServiceDependencies = {
     getProducts: async (chatId: string) => {
       const userProducts = await userService.getUserProducts(chatId)
@@ -109,7 +113,11 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
 
     setFavoriteList: async (chatId: string, url: string) => {
       logger.info(`Adding favorite list for chat ${chatId}`)
-      await userService.setFavoriteList(chatId, url)
+      await ozonService.init()
+      const listId = await ozonService.getFavoriteListId(url)
+      await userService.setFavoriteList(chatId, listId)
+
+      return listId
     },
 
     stop: async (chatId: string) => {
@@ -124,6 +132,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
   )
 
   const checkProductsHandler = createCheckProductsHandler(
+    ozonService,
     productService,
     analyticsService,
     botService,
@@ -139,6 +148,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
 }
 
 function createCheckProductsHandler(
+  ozonService: OzonService,
   productService: ProductService,
   analyticsService: AnalyticsService,
   botService: BotService,
@@ -146,31 +156,23 @@ function createCheckProductsHandler(
   config: AppConfig,
 ) {
   return async () => {
-    let ozonService: OzonService | null = null
-
     try {
-      const cookies = await readCookiesFromFile('.cookies')
-      ozonService = new OzonService({
-        cookies,
-        userAgent: config.ozon.userAgent,
-      })
-
       const users = await userService.getAllUsers()
       logger.info(`Found users: ${users.length}`)
       for (const user of users) {
-        const { favoriteListUrl, chatId } = user
+        const { favoriteListId, chatId } = user
         logger.info(`User: ${chatId}`)
-        if (!favoriteListUrl) {
+        if (!favoriteListId) {
           logger.info(`User ${chatId} has no favorite list`)
-          // continue
+          continue
         }
 
-        // await ozonService.init()
-        // const products = await ozonService.getProducts(favoriteListUrl)
-        // logger.info(`Found products: ${products.length}`)
-
-        const products = json as Product[]
+        await ozonService.init()
+        const products = await ozonService.getProducts(favoriteListId)
         logger.info(`Found products: ${products.length}`)
+
+        // const products = json as Product[]
+        // logger.info(`Found products: ${products.length}`)
 
         const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
 

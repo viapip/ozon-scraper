@@ -101,12 +101,12 @@ export class UserService {
     return this.updateUser(chatId, { isActive })
   }
 
-  async setFavoriteList(chatId: string, listUrl: string): Promise<User | null> {
-    return this.updateUser(chatId, { favoriteListUrl: listUrl })
+  async setFavoriteList(chatId: string, listId: string): Promise<User | null> {
+    return this.updateUser(chatId, { favoriteListId: listId })
   }
 
   async removeFavoriteList(chatId: string): Promise<User | null> {
-    return this.updateUser(chatId, { favoriteListUrl: undefined })
+    return this.updateUser(chatId, { favoriteListId: undefined })
   }
 
   async deleteUser(chatId: string): Promise<void> {

@@ -10,6 +10,10 @@ export function getRandomDelay(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
+export function validateUrl(url: string): boolean {
+  return (/(?:https?:\/\/)?(?:www\.)?ozon\.ru\/t\/.+/).test(url)
+}
+
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',

@@ -131,7 +131,33 @@ export class OzonService {
     // })
   }
 
-  async getProducts(favoriteListUrl: string): Promise<Product[]> {
+  // example https://ozon.ru/t/KoOMPQL forwarded to url https://www.ozon.ru/my/favorites/shared?list=QqweASdsaWwg and get query param list
+  async getFavoriteListId(favoriteListUrl: string): Promise<string> {
+    if (!this.page) {
+      throw new Error('Page not initialized')
+    }
+
+    // Переходим по ссылке и ждем всех редиректов
+    await this.page.goto(favoriteListUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    })
+
+    // Получаем финальный URL после всех редиректов
+    const finalUrl = this.page.url()
+    const url = new URL(finalUrl)
+
+    // Получаем ID из параметра list
+    const listId = url.searchParams.get('list')
+
+    if (!listId) {
+      throw new Error('Failed to get favorite list ID from URL')
+    }
+
+    return listId
+  }
+
+  async getProducts(favoriteListId: string): Promise<Product[]> {
     if (!this.browser) {
       throw new Error('Browser not initialized')
     }
@@ -145,9 +171,9 @@ export class OzonService {
     }
 
     try {
-      await this.page.goto(favoriteListUrl, {
+      await this.page.goto(`https://www.ozon.ru/my/favorites/shared?list=${favoriteListId}`, {
         waitUntil: 'domcontentloaded',
-        timeout: 30000,
+        timeout: 15000,
       })
 
       // Wait for challenge

@@ -1,7 +1,7 @@
 import { createConsola } from 'consola'
 import { Telegraf } from 'telegraf'
 
-import { formatPrice } from '../utils/helpers.js'
+import { formatPrice, validateUrl } from '../utils/helpers.js'
 
 import type { ProductAnalytics, User } from '../types/index.js'
 import type { Context } from 'telegraf'
@@ -13,7 +13,7 @@ export interface BotServiceDependencies {
   getProducts: (chatId: string) => Promise<ProductAnalytics[]>
   clearUserProducts: (chatId: string) => Promise<void>
   addUser: (chatId: string) => Promise<void>
-  setFavoriteList: (chatId: string, url: string) => Promise<void>
+  setFavoriteList: (chatId: string, url: string) => Promise<string>
   stop: (chatId: string) => Promise<void>
   getUser: (chatId: string) => Promise<User | null>
   setActive: (chatId: string, isActive: boolean) => Promise<void>
@@ -89,9 +89,18 @@ export class BotService {
       }
 
       const [, url] = ctx.message.text.split(' ')
+      if (!validateUrl(url)) {
+        ctx.reply('Invalid URL, example: https://ozon.ru/t/QweRtY', {
+          link_preview_options: {
+            is_disabled: true,
+          },
+        })
 
-      await this.dependencies.setFavoriteList(ctx.chat.id.toString(), url)
-      ctx.reply(`Favorite list added`)
+        return
+      }
+
+      const listId = await this.dependencies.setFavoriteList(ctx.chat.id.toString(), url)
+      ctx.reply(`Favorite list added: ${listId} \n\n For check: https://www.ozon.ru/my/favorites/shared?list=${listId}`)
     })
 
     this.bot.command('adduser', async (ctx) => {
