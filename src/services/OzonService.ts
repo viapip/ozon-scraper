@@ -47,7 +47,7 @@ export class OzonService {
 
   async init(): Promise<void> {
     this.browser = await chromium.launch({
-      headless: true,
+      headless: false,
       args: BROWSER_ARGS,
     })
 
@@ -157,7 +157,7 @@ export class OzonService {
     return listId
   }
 
-  async getProducts(favoriteListId: string): Promise<Product[]> {
+  async getProducts(favoriteListUrl: string): Promise<Product[]> {
     if (!this.browser) {
       throw new Error('Browser not initialized')
     }
@@ -171,7 +171,7 @@ export class OzonService {
     }
 
     try {
-      await this.page.goto(`https://www.ozon.ru/my/favorites/shared?list=${favoriteListId}`, {
+      await this.page.goto(favoriteListUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 15000,
       })

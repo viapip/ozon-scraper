@@ -3,7 +3,7 @@ import process from 'node:process'
 import { createConsola } from 'consola'
 import dotenv from 'dotenv'
 
-import json from '../test-product.json'
+// import json from '../test-product.json'
 
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { BotService } from './services/BotService.js'
@@ -116,6 +116,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
       await ozonService.init()
       const listId = await ozonService.getFavoriteListId(url)
       await userService.setFavoriteList(chatId, listId)
+      await ozonService.close()
 
       return listId
     },
@@ -147,6 +148,14 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
   return new AppServices(productService, analyticsService, botService, scheduler)
 }
 
+function getUrlList(listId: string, isAdmin: boolean): string {
+  // if (isAdmin) {
+  //   return `https://www.ozon.ru/my/favorites/list?list=${listId}`
+  // }
+
+  return `https://www.ozon.ru/my/favorites/shared?list=${listId}`
+}
+
 function createCheckProductsHandler(
   ozonService: OzonService,
   productService: ProductService,
@@ -159,36 +168,45 @@ function createCheckProductsHandler(
     try {
       const users = await userService.getAllUsers()
       logger.info(`Found users: ${users.length}`)
+
+      await ozonService.init()
+
       for (const user of users) {
         const { favoriteListId, chatId } = user
         logger.info(`User: ${chatId}`)
+
         if (!favoriteListId) {
           logger.info(`User ${chatId} has no favorite list`)
           continue
         }
+        try {
+          const url = getUrlList(favoriteListId, config.telegram.adminChatId === chatId)
+          const products = await ozonService.getProducts(url)
+          logger.info(`Found products: ${products.length}`)
 
-        await ozonService.init()
-        const products = await ozonService.getProducts(favoriteListId)
-        logger.info(`Found products: ${products.length}`)
+          // const products = json as Product[]
+          // logger.info(`Found products: ${products.length}`)
 
-        // const products = json as Product[]
-        // logger.info(`Found products: ${products.length}`)
+          const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
 
-        const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
+          await userService.updateUserProducts(chatId, products.map(product => product.id))
 
-        await userService.updateUserProducts(chatId, products.map(product => product.id))
+          // console.log(JSON.stringify(analyticsArray, null, 2))
+          const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0)
 
-        // console.log(JSON.stringify(analyticsArray, null, 2))
-        const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0)
+          logger.info(`Discounted products for ${chatId}: ${discountedProducts.length}`)
 
-        logger.info(`Discounted products for ${chatId}: ${discountedProducts.length}`)
-
-        if (discountedProducts.length > 0) {
-          await botService.sendAnalytics(chatId, discountedProducts)
+          if (discountedProducts.length > 0) {
+            await botService.sendAnalytics(chatId, discountedProducts)
+          }
         }
-
-        await ozonService.close()
+        catch (error) {
+          logger.error(`Error during products check for ${chatId}:`, error)
+          continue
+        }
       }
+
+      // await ozonService.close()
     }
     catch (error) {
       logger.error('Error during products check:', error)
