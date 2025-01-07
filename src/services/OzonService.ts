@@ -48,7 +48,7 @@ export class OzonService {
 
   async init(): Promise<void> {
     this.browser = await chromium.launch({
-      headless: false,
+      // headless: false,
       args: BROWSER_ARGS,
     })
 
@@ -66,26 +66,26 @@ export class OzonService {
     })
 
     await this.context.addInitScript(() => {
-      // Re webdriver
+      // Prevent detection of automated browser by overriding key browser properties
+      // This helps bypass anti-bot mechanisms
       Object.defineProperty(navigator, 'webdriver', { get: () => null })
 
-      // Emulate plugins
+      // Emulate browser plugins to appear more like a real browser
       const pluginArray = Array.from({ length: 3 }, () => ({
         description: 'Chromium PDF Plugin',
         filename: 'internal-pdf-viewer',
         name: 'Chrome PDF Plugin',
         length: 1,
       }))
-
-      // Emulate plugins
       Object.defineProperty(navigator, 'plugins', { get: () => pluginArray })
 
-      // Emulate languages
+      // Set realistic language preferences
       Object.defineProperty(navigator, 'languages', { get: () => ['ru-RU', 'ru', 'en-US', 'en'] })
 
-      // Emulate permissions
+      // Override permissions query to handle notifications more naturally
       const originalFunction = window.navigator.permissions.query
       window.navigator.permissions.query = async (parameters: PermissionDescriptor): Promise<PermissionStatus> => {
+        // Special handling for notification permissions to appear more human-like
         if (parameters.name === 'notifications') {
           return Promise.resolve({
             state: Notification.permission,
@@ -104,8 +104,10 @@ export class OzonService {
         return originalFunction.call(window.navigator.permissions, parameters)
       }
 
+      // Emulate WebGL rendering context to appear more like a real browser
       const { getParameter } = WebGLRenderingContext.prototype
       WebGLRenderingContext.prototype.getParameter = function (parameter) {
+        // Spoof specific WebGL parameters to look like a real graphics setup
         if (parameter === 37445) {
           return 'Intel Open Source Technology Center'
         }
@@ -117,11 +119,11 @@ export class OzonService {
       }
     })
 
-    // Load cookies with domain validation
+    // Load and validate cookies, ensuring they have correct domain settings
     const parsedCookies = parseCookieString(this.config.cookies)
     const validCookies = parsedCookies.map(cookie => ({
       ...cookie,
-      domain: cookie.domain || '.ozon.ru', // Ensure domain is set
+      domain: cookie.domain || '.ozon.ru',
       path: cookie.path || '/',
       secure: true,
       sameSite: 'None' as const,
@@ -132,15 +134,10 @@ export class OzonService {
 
     this.page = await this.context.newPage()
 
-    // Set pageViewId
-    // await this.page.evaluate(() => {
-    //   localStorage.setItem('TSDK:https://www.ozon.ru/', JSON.stringify({ pageViewId: '42c9a4e2-f9cb-47b6-9cf6-6ffa516ef91d', pageType: 'home' }))
-    // })
-
     await this.preloadActions(this.page)
   }
 
-  // example https://ozon.ru/t/KoOMPQL forwarded to url https://www.ozon.ru/my/favorites/shared?list=QqweASdsaWwg and get query param list
+  // Retrieve the shared favorite list ID from a given URL
   async getFavoriteListId(favoriteListUrl: string): Promise<string> {
     if (!this.page) {
       throw new Error('Page not initialized')
@@ -163,6 +160,7 @@ export class OzonService {
     return listId
   }
 
+  // Fetch products from a given favorite list URL
   async getProducts(favoriteListUrl: string): Promise<Product[]> {
     if (!this.browser) {
       throw new Error('Browser not initialized')
@@ -222,6 +220,7 @@ export class OzonService {
     }
   }
 
+  // Preload pages to simulate natural browsing behavior
   private async preloadActions(page: Page): Promise<void> {
     const urls = ['https://www.ozon.ru/']
 
@@ -234,6 +233,7 @@ export class OzonService {
     }
   }
 
+  // Handle potential access restrictions or challenges on the page
   private async handleAccessRestriction(page: Page): Promise<void> {
     // Wait for challenge
     const challengeSelector = '.container'
@@ -260,30 +260,34 @@ export class OzonService {
     }
   }
 
+  // Simulate human-like interactions on the page
   private async simulateHumanBehavior(page: Page): Promise<void> {
     const actions = [
       async () => {
+        // Randomly move mouse cursor across the screen
         const x = Math.random() * 1920
         const y = Math.random() * 1080
         await page.mouse.move(x, y, { steps: 50 })
       },
       async () => {
-        // Random scroll
+        // Simulate random scrolling to mimic human interaction
         await page.mouse.wheel(0, Math.random() * 500 - 250)
       },
       async () => {
-        // Random clicks on safe elements
+        // Randomly hover over safe elements like links or buttons
         const safeElements = await page.$$('a, button')
         if (safeElements.length > 0) {
           const randomElement = safeElements[Math.floor(Math.random() * safeElements.length)]
           const box = await randomElement.boundingBox()
           if (box) {
+            // Move to the center of the random element
             await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 25 })
           }
         }
       },
     ]
 
+    // Perform 5 random human-like actions with random delays
     for (let i = 0; i < 5; i++) {
       const randomAction = actions[Math.floor(Math.random() * actions.length)]
       await randomAction()
@@ -291,25 +295,33 @@ export class OzonService {
     }
   }
 
+  // Extract product details from the page
   private async extractProducts(page: Page): Promise<Product[]> {
     return await page.$$eval('.widget-search-result-container .tile-root', elements => elements.map((item) => {
+      // Find all product links and use the last one (most specific)
       const productLinks = Array.from(item.querySelectorAll('a[href*="/product/"]'))
       const mainProductLink = productLinks[productLinks.length - 1] as HTMLAnchorElement
 
       const nameElement = mainProductLink?.querySelector('span')
 
+      // Construct full URL and extract product ID
       const url = window.location.origin + mainProductLink?.getAttribute('href') || ''
       const id = url.match(/\/product\/([^/?]+)/)?.[1] || ''
 
+      // Find price elements using a regex to match price format
       const allTextElements = Array.from(item.querySelectorAll('*'))
       const priceElements = allTextElements.filter((el) => {
         const text = el.textContent?.trim() || ''
 
+        // Match prices in rubles (e.g., 1 000 ₽ or 500₽)
         return (/^\d[\d\s]*₽$/).test(text)
       })
 
+      // Parse price, handling potential formatting
       const priceText = priceElements[0]?.textContent || '0 ₽'
       const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
+
+      // Determine stock status (not in stock if price is 0 and "Similar" text exists)
       let inStock = true
       if (price === 0 && item.textContent?.includes('Похожие')) {
         inStock = false
@@ -327,13 +339,17 @@ export class OzonService {
     }))
   }
 
+  // Smoothly scroll to the bottom of the page
   private async smoothScrollToBottom(page: Page): Promise<void> {
     const footerSelector = '[data-widget="footer"]'
     let isFooterVisible = false
 
+    // Gradually scroll down until footer is visible
     while (!isFooterVisible) {
+      // Random scroll step to simulate natural scrolling
       const scrollStep = Math.floor(Math.random() * (500 - 300 + 1)) + 300
 
+      // Smoothly scroll by the random step
       await page.evaluate((step) => {
         window.scrollBy({
           top: step,
@@ -341,6 +357,7 @@ export class OzonService {
         })
       }, scrollStep)
 
+      // Check if footer is now visible
       isFooterVisible = await page.evaluate((selector) => {
         const footer = document.querySelector(selector)
         if (!footer) {
@@ -352,12 +369,14 @@ export class OzonService {
         return rect.top <= window.innerHeight
       }, footerSelector)
 
+      // Add random delay between scroll steps
       await delay(Math.floor(Math.random() * (1000 - 600 + 1)) + 200)
     }
 
     await delay(500)
   }
 
+  // Close and clean up browser resources
   async close(): Promise<void> {
     try {
       if (this.page) {

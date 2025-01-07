@@ -9,6 +9,7 @@ const logger = consola.withTag('ProductService')
 export class ProductService {
   private static readonly PRODUCT_PREFIX = 'product:'
   private static readonly HISTORY_PREFIX = 'history:'
+
   private readonly storageService: StorageService<Product | PriceHistory>
 
   constructor() {
@@ -20,6 +21,7 @@ export class ProductService {
   }
 
   async getAllProducts(): Promise<Product[]> {
+    // Retrieve all product keys and fetch their corresponding items
     const keys = await this.storageService.getAllKeys(ProductService.PRODUCT_PREFIX)
     logger.info(`Found ${keys.length} products`)
     const products = await Promise.all(keys.map(async key => await this.storageService.getItem(key)))
@@ -75,6 +77,7 @@ export class ProductService {
 
     const cutoffDate = subMonths(new Date(), period)
 
+    // Retrieve all history keys for the specific product
     const keys = await this.storageService.getAllKeys(`${ProductService.HISTORY_PREFIX}${productId}:`)
     for (const key of keys) {
       const historyItem = await this.storageService.getItem(key)
@@ -91,6 +94,7 @@ export class ProductService {
   }
 
   async clearOldHistory(productId: string): Promise<void> {
+    // Remove price history older than 3 months
     const threeMonthsAgo = subMonths(new Date(), 3)
     await this.storageService.clearOldItems(`${ProductService.HISTORY_PREFIX}${productId}`, threeMonthsAgo)
   }
@@ -100,6 +104,7 @@ export class ProductService {
   }
 
   async clearUnavailableProducts(currentProducts: string[]): Promise<void> {
+    // Remove products and their history that are no longer in the current list
     const products = await this.getAllProductsIDs()
     for (const product of products) {
       if (!currentProducts.includes(product)) {
@@ -110,6 +115,7 @@ export class ProductService {
   }
 
   async close(): Promise<void> {
+    // Close the storage service connection
     await this.storageService.close()
   }
 }

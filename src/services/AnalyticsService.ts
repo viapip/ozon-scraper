@@ -3,7 +3,7 @@ import consola from 'consola'
 import type { ProductService } from './ProductService.js'
 import type { PriceHistory, ProductAnalytics } from '../types/index.js'
 
-const logger = consola.withTag('AnalyticsService')
+// const logger = consola.withTag('AnalyticsService')
 export class AnalyticsService {
   constructor(private productService: ProductService) {}
 
@@ -19,13 +19,14 @@ export class AnalyticsService {
 
     const minPriceItem = this.findExtremePrice(history, 'min')
     const maxPriceItem = this.findExtremePrice(history, 'max')
-
     const prevHistoryItem = history[history.length - 2] || product
-
     const becameAvailable = !prevHistoryItem.inStock && product.inStock
     const becameUnavailable = prevHistoryItem.inStock && !product.inStock
 
-    const priceDiffPercent = product.price && this.calculatePriceChange(product.price, prevHistoryItem.price ?? product.price)
+    // fix infinite price change when product is not available
+    const prevPrice = prevHistoryItem.price === 0 ? product.price : prevHistoryItem.price
+
+    const priceDiffPercent = product.price && this.calculatePriceChange(product.price, prevPrice)
 
     return {
       minPrice: minPriceItem,
@@ -39,8 +40,9 @@ export class AnalyticsService {
 
   private findExtremePrice(history: PriceHistory[], type: 'min' | 'max'): PriceHistory {
     return history.reduce((extreme, current) => {
-      if (current.price === 0) {
-        return extreme
+      // fix for min price when product is not available
+      if (!extreme.inStock || !current.inStock) {
+        return current.inStock ? current : extreme
       }
 
       const comparison = type === 'min'

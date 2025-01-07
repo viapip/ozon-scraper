@@ -1,7 +1,7 @@
 import { createConsola } from 'consola'
 
-const logger = createConsola()
-  .withTag('ReportService')
+// const logger = createConsola()
+//   .withTag('ReportService')
 
 export interface ApplicationStats {
   totalChecks: number

@@ -37,7 +37,7 @@ interface CookieParams {
   sameSite?: 'Strict' | 'Lax' | 'None'
 }
 
-const ALLOWED_COOKIES = ['__Secure-access-token', '__Secure-refresh-token', '__Secure-user-id']
+// const ALLOWED_COOKIES = ['__Secure-access-token', '__Secure-refresh-token', '__Secure-user-id']
 
 export function parseCookieString(cookieString: string): CookieParams[] {
   return cookieString

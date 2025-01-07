@@ -3,7 +3,7 @@ import process from 'node:process'
 import { createConsola } from 'consola'
 import dotenv from 'dotenv'
 
-// import json from '../test-product.json'
+import json from '../test-product.json'
 
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { BotService } from './services/BotService.js'
@@ -23,7 +23,6 @@ dotenv.config()
 
 interface AppConfig {
   ozon: {
-    favoriteListUrl: string
     userAgent: string
   }
   telegram: {
@@ -35,7 +34,6 @@ interface AppConfig {
 function validateConfig(): AppConfig {
   const config: AppConfig = {
     ozon: {
-      favoriteListUrl: process.env.OZON_FAVORITES_URL || '',
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
     },
     telegram: {
@@ -44,9 +42,6 @@ function validateConfig(): AppConfig {
     },
   }
 
-  if (!config.ozon.favoriteListUrl) {
-    throw new Error('OZON_FAVORITES_URL is required in environment variables')
-  }
   if (!config.telegram.botToken) {
     throw new Error('TELEGRAM_BOT_TOKEN is required in environment variables')
   }
@@ -204,12 +199,12 @@ function createCheckProductsHandler(
         try {
           const url = getUrlList(favoriteListId, config.telegram.adminChatId === chatId)
           const products = await ozonService.getProducts(url)
-          totalProducts += products.length
-          logger.info(`Found products: ${products.length}`)
           // logger.info(JSON.stringify(products, null, 2))
           // const products = json as Product[]
-          // logger.info(`Found products: ${products.length}`)
+          logger.info(`Found products: ${products.length}`)
 
+          totalProducts += products.length
+          logger.info(`Found products: ${products.length}`)
           const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
 
           await userService.updateUserProducts(chatId, products.map(product => product.id))

@@ -234,7 +234,6 @@ export class BotService {
     const { name, url, price: currentPrice } = analytics.current
     const { price: minPrice } = analytics.minPrice
     const { price: maxPrice } = analytics.maxPrice
-    // 🔔 ⚠️ 🚫
 
     const trend = this.getPriceTrendSymbol(analytics.priceDiffPercent)
     const priceChangeFormatted = this.formatPriceChange(analytics.priceDiffPercent)
