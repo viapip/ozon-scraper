@@ -10,11 +10,13 @@ export interface Product {
   url: string
   price: number
   timestamp: number
+  inStock: boolean
 }
 
 export interface PriceHistory {
   productId: string
   price: number
+  inStock: boolean
   timestamp: number
 }
 
@@ -23,6 +25,8 @@ export interface ProductAnalytics {
   maxPrice: PriceHistory
   current: Product
   priceDiffPercent: number
+  becameAvailable: boolean
+  becameUnavailable: boolean
 }
 
 export interface ProductListUrl {

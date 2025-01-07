@@ -14,6 +14,10 @@ export function validateUrl(url: string): boolean {
   return (/(?:https?:\/\/)?(?:www\.)?ozon\.ru\/t\/.+/).test(url)
 }
 
+export function isProductAvailable(price: number): boolean {
+  return price !== -1
+}
+
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',

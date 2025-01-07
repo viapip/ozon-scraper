@@ -183,7 +183,7 @@ function createCheckProductsHandler(
           const url = getUrlList(favoriteListId, config.telegram.adminChatId === chatId)
           const products = await ozonService.getProducts(url)
           logger.info(`Found products: ${products.length}`)
-
+          logger.info(JSON.stringify(products, null, 2))
           // const products = json as Product[]
           // logger.info(`Found products: ${products.length}`)
 
@@ -192,7 +192,7 @@ function createCheckProductsHandler(
           await userService.updateUserProducts(chatId, products.map(product => product.id))
 
           // console.log(JSON.stringify(analyticsArray, null, 2))
-          const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0)
+          const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0 || analytics.becameAvailable || analytics.becameUnavailable)
 
           logger.info(`Discounted products for ${chatId}: ${discountedProducts.length}`)
 
@@ -205,8 +205,6 @@ function createCheckProductsHandler(
           continue
         }
       }
-
-      // await ozonService.close()
     }
     catch (error) {
       logger.error('Error during products check:', error)
@@ -244,15 +242,19 @@ async function getAnalyticsProducts(
 }
 
 async function main() {
+  let services: AppServices | null = null
+  let config: AppConfig | null = null
   try {
-    const config = validateConfig()
-    const services = await initializeServices(config)
+    config = validateConfig()
+    services = await initializeServices(config)
 
     services.scheduler.start()
     await services.scheduler.checkNow() // Initial check
 
     const cleanup = async () => {
-      await services.cleanup()
+      if (services) {
+        await services.cleanup()
+      }
       process.exit(0)
     }
 
@@ -260,6 +262,10 @@ async function main() {
     process.on('SIGTERM', cleanup)
   }
   catch (error) {
+    if (services && config) {
+      await services.botService.sendTelegramMessage(config.telegram.adminChatId, 'Critical error')
+    }
+
     logger.error('Critical error:', error)
     process.exit(1)
   }

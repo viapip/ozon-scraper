@@ -293,13 +293,19 @@ export class OzonService {
       })
 
       const priceText = priceElements[0]?.textContent || '0 ₽'
-      const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
+      let price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
+      let inStock = true
+      if (price === 0 && item.textContent?.includes('Похожие')) {
+        price = -1
+        inStock = false
+      }
 
       return {
         id,
         name: nameElement?.textContent?.trim() || '',
         url,
         price,
+        inStock,
         timestamp: new Date()
           .getTime(),
       }

@@ -166,23 +166,9 @@ export class BotService {
     }
   }
 
-  async sendAnalytics(chatId: string, analyticsArray: ProductAnalytics[] | null): Promise<void> {
+  async sendAnalytics(chatId: string, analyticsArray: ProductAnalytics[]): Promise<void> {
     if (!this.isRunning) {
       logger.warn('Bot is not running, skipping message')
-
-      return
-    }
-
-    if (!analyticsArray) {
-      logger.warn('No analytics data to send')
-      this.bot.telegram.sendMessage(chatId, 'No data to send')
-
-      return
-    }
-
-    if (analyticsArray.length === 0) {
-      logger.warn('No price changes to send')
-      this.bot.telegram.sendMessage(chatId, 'Prices did not change')
 
       return
     }
@@ -211,7 +197,7 @@ export class BotService {
     }
   }
 
-  private async sendTelegramMessage(chatId: string, text: string) {
+  async sendTelegramMessage(chatId: string, text: string) {
     await this.bot.telegram.sendMessage(chatId, text, {
       parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
@@ -240,13 +226,22 @@ export class BotService {
     const { name, url, price: currentPrice } = analytics.current
     const { price: minPrice } = analytics.minPrice
     const { price: maxPrice } = analytics.maxPrice
+    // 🔔 ⚠️ 🚫
 
     const trend = this.getPriceTrendSymbol(analytics.priceDiffPercent)
     const priceChangeFormatted = this.formatPriceChange(analytics.priceDiffPercent)
     const [productName, ..._args] = name.split(',')
 
+    let inStockText = ``
+    if (analytics.becameAvailable) {
+      inStockText = '🔔'
+    }
+    else if (analytics.becameUnavailable) {
+      inStockText = '🚫'
+    }
+
     return `
-<b>${productName}</b>
+${inStockText}<b>${productName}</b>
 💵 <b>${formatPrice(currentPrice)}</b> 
 📈 <code>${trend} ${priceChangeFormatted}</code>
 ℹ️ Min/Max: <code>${formatPrice(minPrice)}/${formatPrice(maxPrice)}</code>
