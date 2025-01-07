@@ -44,7 +44,7 @@ export class BotService {
     this.dependencies = dependencies
   }
 
-  async isUserExists(ctx: Context) {
+  async canActivate(ctx: Context) {
     try {
       if (!ctx.chat) {
         throw new Error('Chat not found')
@@ -52,7 +52,7 @@ export class BotService {
 
       const user = await this.dependencies.getUser(ctx.chat.id.toString())
 
-      return Boolean(user)
+      return Boolean(user) && user?.isActive
     }
     catch (error) {
       logger.error('Failed to check if user exists:', error)
@@ -64,19 +64,44 @@ export class BotService {
   }
 
   async initCommands(): Promise<void> {
+    this.bot.command('start', async (ctx) => {
+      const userId = ctx.chat.id
+      await this.dependencies.addUser(userId.toString())
+
+      const activateCommand = `/activate ${userId}`
+
+      const welcomeMessage = [
+        '*Добро пожаловать в бота* 🤖',
+        '',
+        `Ваш ID: \`${userId}\``,
+        '',
+        '*Последний шаг:*',
+        'Для доступа к функциям бота требуется активация.',
+        '',
+        '*Попросите активного пользователя ввести команду:*',
+        `\`${activateCommand}\``,
+      ].join('\n')
+
+      await ctx.reply(welcomeMessage, {
+        parse_mode: 'Markdown',
+      })
+    })
+
     this.bot.command('getid', (ctx) => {
       const chatId = ctx.chat.id
-      ctx.reply(`Your current chatId: ${chatId}`)
+      ctx.reply(`Ваш текущий ID: ${chatId}`)
     })
 
     this.bot.command('getall', async (ctx) => {
-      if (!await this.isUserExists(ctx)) {
+      if (!await this.canActivate(ctx)) {
+        ctx.reply('Ваш аккаунт еще не активирован')
+
         return
       }
 
       const products = await this.dependencies.getProducts(ctx.chat.id.toString())
       if (products.length === 0) {
-        ctx.reply('No products found')
+        ctx.reply('Товары не найдены')
 
         return
       }
@@ -85,13 +110,13 @@ export class BotService {
     })
 
     this.bot.command('addlist', async (ctx) => {
-      if (!await this.isUserExists(ctx)) {
+      if (!await this.canActivate(ctx)) {
         return
       }
 
       const [, url] = ctx.message.text.split(' ')
       if (!validateUrl(url)) {
-        ctx.reply('Invalid URL, example: https://ozon.ru/t/QweRtY', {
+        ctx.reply('Неверный формат ссылки. Пример: https://ozon.ru/t/QweRtY', {
           link_preview_options: {
             is_disabled: true,
           },
@@ -101,46 +126,82 @@ export class BotService {
       }
 
       const listId = await this.dependencies.setFavoriteList(ctx.chat.id.toString(), url)
-      ctx.reply(`Favorite list added: ${listId} \n\n For check: https://www.ozon.ru/my/favorites/shared?list=${listId}`)
+      ctx.reply(`Список избранного добавлен: ${listId} \n\nДля проверки: https://www.ozon.ru/my/favorites/shared?list=${listId}`)
     })
 
-    this.bot.command('adduser', async (ctx) => {
-      if (!await this.isUserExists(ctx)) {
+    this.bot.command('activate', async (ctx) => {
+      if (!await this.canActivate(ctx)) {
+        await ctx.reply('❌ У вас нет прав для активации пользователей')
+
         return
       }
 
       const [, userId] = ctx.message.text.split(' ')
       if (!userId) {
-        ctx.reply('User not specified')
+        await ctx.reply('⚠️ Укажите ID пользователя.\nПример: /activate 123456789')
 
         return
       }
-      const user = await this.dependencies.getUser(userId)
 
+      const user = await this.dependencies.getUser(userId)
       if (!user) {
-        ctx.reply('User not found')
+        await ctx.reply('❌ Пользователь не найден. Проверьте ID и попробуйте снова')
 
         return
       }
 
       try {
         await this.dependencies.setActive(userId, true)
-        await this.bot.telegram.sendMessage(userId, '🎉 You are updated status to active')
-        ctx.reply(`User ${userId} updated status to active`)
+
+        // Сообщение для активированного пользователя
+        const activatedUserMessage = [
+          '🎉 *Ваш аккаунт успешно активирован!*',
+          '',
+          '📝 Чтобы добавить список товаров для отслеживания:',
+          '',
+          '1. Откройте страницу товара на OZON',
+          '2. Зайдите в список избранных товаров',
+          '3. Нажмите кнопку "Поделиться"',
+          '4. Скопируйте короткую ссылку (формат: ozon.ru/t/XXXXXX)',
+          '5. Используйте команду /addlist',
+          '',
+          '*Доступные команды:*',
+          '',
+          '📋 */addlist* - Добавить список избранного для отслеживания',
+          '🔍 */getall* - Показать все отслеживаемые товары',
+          '⏹️ */stop* - Остановить отслеживание всех товаров, для возобновления добавьте список снова',
+          '🆔 */getid* - Показать ваш ID',
+          '',
+          '*Пример добавления списка:*',
+          '`/addlist https://ozon.ru/t/QweRtY`',
+          '',
+          '❗️ Важно: Используйте только короткие ссылки из кнопки "Поделиться"',
+          '✅ Правильно: ozon.ru/t/QweRtY',
+          '❌ Неправильно: ozon.ru/product/...',
+        ].join('\n')
+
+        await this.bot.telegram.sendMessage(userId, activatedUserMessage, {
+          parse_mode: 'Markdown',
+        })
+
+        // Сообщение для активирующего пользователя
+        await ctx.reply(`✅ Готово! Пользователь ${userId} успешно активирован`)
       }
       catch (error) {
-        logger.error(`Failed to add user ${userId}:`, error)
-        ctx.reply('Failed to add user')
+        logger.error(`Failed to activate user ${userId}:`, error)
+        await ctx.reply('❌ Не удалось активировать пользователя. Попробуйте позже')
       }
     })
 
     this.bot.command('stop', async (ctx) => {
-      if (!await this.isUserExists(ctx)) {
+      if (!await this.canActivate(ctx)) {
+        ctx.reply('У вас нет прав для остановки отслеживания')
+
         return
       }
 
       await this.dependencies.stop(ctx.chat.id.toString())
-      ctx.reply('🛑 Stopped')
+      ctx.reply('🛑 Отслеживание остановлено')
     })
 
     this.bot.command('report', async (ctx) => {

@@ -83,7 +83,8 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
 
   const adminUser = await userService.getUser(config.telegram.adminChatId)
   if (!adminUser) {
-    await userService.createUser(config.telegram.adminChatId)
+    // await userService.createUser(config.telegram.adminChatId)
+    // await userService.setActive(config.telegram.adminChatId, true)
     logger.info('Admin user created')
   }
 
@@ -133,7 +134,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
 
     getReport: (chatId: string) => {
       if (chatId !== config.telegram.adminChatId) {
-        return '⛔️ This command is only available for admin'
+        return '⛔️ Эта команда доступна только для администратора'
       }
 
       return reportService.getFormattedReport()
@@ -172,9 +173,9 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
 }
 
 function getUrlList(listId: string, isAdmin: boolean): string {
-  // if (isAdmin) {
-  //   return `https://www.ozon.ru/my/favorites/list?list=${listId}`
-  // }
+  if (isAdmin) {
+    return `https://www.ozon.ru/my/favorites/list?list=${listId}`
+  }
 
   return `https://www.ozon.ru/my/favorites/shared?list=${listId}`
 }
@@ -198,13 +199,19 @@ function createCheckProductsHandler(
       let hasErrors = false
 
       for (const user of users) {
-        const { favoriteListId, chatId } = user
+        const { favoriteListId, chatId, isActive } = user
         logger.info(`User: ${chatId}`)
 
         if (!favoriteListId) {
           logger.info(`User ${chatId} has no favorite list`)
           continue
         }
+
+        if (!isActive) {
+          logger.info(`User ${chatId} is not active`)
+          continue
+        }
+
         try {
           const url = getUrlList(favoriteListId, config.telegram.adminChatId === chatId)
           const products = await ozonService.getProducts(url)
@@ -248,9 +255,7 @@ function createCheckProductsHandler(
       logger.error('Error during products check:', error)
     }
     finally {
-      if (ozonService) {
-        await ozonService.close()
-      }
+      await ozonService.close()
     }
   }
 }

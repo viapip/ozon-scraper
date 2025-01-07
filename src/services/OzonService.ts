@@ -391,6 +391,8 @@ export class OzonService {
         await this.browser.close()
         this.browser = null
       }
+
+      logger.info('OzonService closed')
     }
     catch (error) {
       logger.error('Error during cleanup:', error)
