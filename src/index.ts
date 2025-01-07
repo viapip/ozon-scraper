@@ -29,6 +29,9 @@ interface AppConfig {
     botToken: string
     adminChatId: string
   }
+  scheduler: {
+    checkInterval: number
+  }
 }
 
 function validateConfig(): AppConfig {
@@ -39,6 +42,9 @@ function validateConfig(): AppConfig {
     telegram: {
       botToken: process.env.TELEGRAM_BOT_TOKEN || '',
       adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || '',
+    },
+    scheduler: {
+      checkInterval: Number(process.env.SCHEDULER_CHECK_INTERVAL) || 30,
     },
   }
 
@@ -149,7 +155,10 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
     config,
   )
 
-  const scheduler = new SchedulerService(checkProductsHandler)
+  const scheduler = new SchedulerService(
+    config.scheduler.checkInterval,
+    checkProductsHandler,
+  )
 
   await botService.init()
 

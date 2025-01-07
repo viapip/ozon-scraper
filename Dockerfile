@@ -37,11 +37,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
-    # Системные зависимости
+    # system dependencies
     libglib2.0-0 \
     libnss3 \
     libnspr4 \
-    # Графические библиотеки
+    # graphic libraries
     libatk1.0-0 \
     libatk-bridge2.0-0 \
     libdrm2 \
@@ -51,7 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxfixes3 \
     libxrandr2 \
     libgbm1 \
-    # Дополнительные библиотеки для Playwright
+    # additional libraries for playwright
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libcairo2 \

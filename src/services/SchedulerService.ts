@@ -9,7 +9,7 @@ export class SchedulerService {
   private interval: NodeJS.Timeout | null = null
   private isRunning = false
 
-  constructor(private callback: () => Promise<void>) {}
+  constructor(private baseInterval: number, private callback: () => Promise<void>) {}
 
   start(): void {
     if (this.isRunning) {
@@ -33,7 +33,7 @@ export class SchedulerService {
 
   private scheduleNext(): void {
     // Base interval - 30 minutes
-    const baseInterval = fromMinutes(30)
+    const baseInterval = fromMinutes(this.baseInterval)
 
     // Random deviation ±15 minutes
     // const deviation = getRandomDelay(-fromMinutes(15), fromMinutes(15))
