@@ -189,7 +189,7 @@ function createCheckProductsHandler(
       const users = await userService.getAllUsers()
       logger.info(`Found users: ${users.length}`)
 
-      // await ozonService.init()
+      await ozonService.init()
       let totalProducts = 0
       let hasErrors = false
 
