@@ -9,6 +9,7 @@ import type { OzonConfig, Product } from '../types/index.js'
 import type { Browser, BrowserContext, Page } from 'playwright'
 
 const logger = createConsola()
+  .withTag('OzonService')
 
 const BROWSER_ARGS = [
   '--disable-blink-features=AutomationControlled',
@@ -116,10 +117,18 @@ export class OzonService {
       }
     })
 
+    // Load cookies with domain validation
     const parsedCookies = parseCookieString(this.config.cookies)
-    await this.context.addCookies(parsedCookies)
+    const validCookies = parsedCookies.map(cookie => ({
+      ...cookie,
+      domain: cookie.domain || '.ozon.ru', // Ensure domain is set
+      path: cookie.path || '/',
+      secure: true,
+      sameSite: 'None' as const,
+    }))
 
-    logger.info('Cookies successfully set from file')
+    await this.context.addCookies(validCookies)
+    logger.info(`Loaded ${validCookies.length} cookies from file`)
 
     this.page = await this.context.newPage()
 
@@ -190,8 +199,15 @@ export class OzonService {
       logger.info('Extracting products...')
       const products = await this.extractProducts(this.page)
 
+      // Save all cookies after successful page load
       const cookies = await this.context.cookies()
-      await saveCookiesToFile('.cookies', cookies)
+      const relevantCookies = cookies.filter(cookie =>
+        cookie.domain?.includes('ozon.ru')
+        || cookie.domain?.includes('.ozon.ru'),
+      )
+
+      logger.info(`Saving ${relevantCookies.length} cookies to file`)
+      await saveCookiesToFile('.cookies', relevantCookies)
       logger.info('New cookies successfully saved to file')
 
       return products
@@ -282,7 +298,7 @@ export class OzonService {
 
       const nameElement = mainProductLink?.querySelector('span')
 
-      const url = mainProductLink?.getAttribute('href') || ''
+      const url = window.location.origin + mainProductLink?.getAttribute('href') || ''
       const id = url.match(/\/product\/([^/?]+)/)?.[1] || ''
 
       const allTextElements = Array.from(item.querySelectorAll('*'))
@@ -293,10 +309,9 @@ export class OzonService {
       })
 
       const priceText = priceElements[0]?.textContent || '0 ₽'
-      let price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
+      const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
       let inStock = true
       if (price === 0 && item.textContent?.includes('Похожие')) {
-        price = -1
         inStock = false
       }
 

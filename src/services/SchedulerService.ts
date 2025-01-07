@@ -1,6 +1,6 @@
 import { createConsola } from 'consola'
 
-import { getRandomDelay } from '../utils/helpers.js'
+import { fromMinutes, getRandomDelay } from '../utils/helpers.js'
 
 const logger = createConsola()
   .withTag('SchedulerService')
@@ -32,13 +32,13 @@ export class SchedulerService {
   }
 
   private scheduleNext(): void {
-    // Base interval - 1 hour
-    const baseInterval = 3600000
+    // Base interval - 30 minutes
+    const baseInterval = fromMinutes(30)
 
     // Random deviation ±15 minutes
-    const deviation = getRandomDelay(-900000, 900000)
-    const nextInterval = baseInterval + deviation
-
+    // const deviation = getRandomDelay(-fromMinutes(15), fromMinutes(15))
+    // const nextInterval = baseInterval + deviation
+    const nextInterval = baseInterval
     logger.info(`Next check scheduled in ${Math.round(nextInterval / 1000 / 60)} minutes`)
 
     this.interval = setTimeout(async () => {

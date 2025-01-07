@@ -17,6 +17,7 @@ export interface BotServiceDependencies {
   stop: (chatId: string) => Promise<void>
   getUser: (chatId: string) => Promise<User | null>
   setActive: (chatId: string, isActive: boolean) => Promise<void>
+  getReport: (chatId: string) => string
 }
 
 export class BotService {
@@ -140,6 +141,13 @@ export class BotService {
 
       await this.dependencies.stop(ctx.chat.id.toString())
       ctx.reply('🛑 Stopped')
+    })
+
+    this.bot.command('report', async (ctx) => {
+      const chatId = ctx.chat.id.toString()
+
+      const report = this.dependencies.getReport(chatId)
+      await ctx.reply(report)
     })
   }
 

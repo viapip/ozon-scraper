@@ -9,6 +9,7 @@ import { AnalyticsService } from './services/AnalyticsService.js'
 import { BotService } from './services/BotService.js'
 import { OzonService } from './services/OzonService.js'
 import { ProductService } from './services/ProductService.js'
+import { ReportService } from './services/ReportService.js'
 import { SchedulerService } from './services/SchedulerService.js'
 import { UserService } from './services/UserService.js'
 import { readCookiesFromFile } from './utils/helpers.js'
@@ -17,6 +18,7 @@ import type { BotServiceDependencies } from './services/BotService.js'
 import type { Product, ProductAnalytics } from './types/index.js'
 
 const logger = createConsola()
+  .withTag('App')
 dotenv.config()
 
 interface AppConfig {
@@ -61,6 +63,7 @@ class AppServices {
     public readonly analyticsService: AnalyticsService,
     public readonly botService: BotService,
     public readonly scheduler: SchedulerService,
+    public readonly reportService: ReportService,
   ) {}
 
   async cleanup() {
@@ -74,6 +77,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
   const productService = new ProductService()
   const analyticsService = new AnalyticsService(productService)
   const userService = new UserService()
+  const reportService = new ReportService()
   logger.info('Product services initialized')
 
   const adminUser = await userService.getUser(config.telegram.adminChatId)
@@ -125,6 +129,14 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
       logger.info('Cancelling bot')
       await userService.removeFavoriteList(chatId)
     },
+
+    getReport: (chatId: string) => {
+      if (chatId !== config.telegram.adminChatId) {
+        return '⛔️ This command is only available for admin'
+      }
+
+      return reportService.getFormattedReport()
+    },
   }
 
   const botService = new BotService(
@@ -138,6 +150,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
     analyticsService,
     botService,
     userService,
+    reportService,
     config,
   )
 
@@ -145,7 +158,13 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
 
   await botService.init()
 
-  return new AppServices(productService, analyticsService, botService, scheduler)
+  return new AppServices(
+    productService,
+    analyticsService,
+    botService,
+    scheduler,
+    reportService,
+  )
 }
 
 function getUrlList(listId: string, isAdmin: boolean): string {
@@ -162,6 +181,7 @@ function createCheckProductsHandler(
   analyticsService: AnalyticsService,
   botService: BotService,
   userService: UserService,
+  reportService: ReportService,
   config: AppConfig,
 ) {
   return async () => {
@@ -169,7 +189,9 @@ function createCheckProductsHandler(
       const users = await userService.getAllUsers()
       logger.info(`Found users: ${users.length}`)
 
-      await ozonService.init()
+      // await ozonService.init()
+      let totalProducts = 0
+      let hasErrors = false
 
       for (const user of users) {
         const { favoriteListId, chatId } = user
@@ -182,8 +204,9 @@ function createCheckProductsHandler(
         try {
           const url = getUrlList(favoriteListId, config.telegram.adminChatId === chatId)
           const products = await ozonService.getProducts(url)
+          totalProducts += products.length
           logger.info(`Found products: ${products.length}`)
-          logger.info(JSON.stringify(products, null, 2))
+          // logger.info(JSON.stringify(products, null, 2))
           // const products = json as Product[]
           // logger.info(`Found products: ${products.length}`)
 
@@ -191,24 +214,34 @@ function createCheckProductsHandler(
 
           await userService.updateUserProducts(chatId, products.map(product => product.id))
 
-          // console.log(JSON.stringify(analyticsArray, null, 2))
           const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0 || analytics.becameAvailable || analytics.becameUnavailable)
 
           logger.info(`Discounted products for ${chatId}: ${discountedProducts.length}`)
 
           if (discountedProducts.length > 0) {
+            for (const product of discountedProducts) {
+              if (product.priceDiffPercent < 0) {
+                reportService.recordPriceDrop()
+              }
+              if (product.becameAvailable || product.becameUnavailable) {
+                reportService.recordAvailabilityChange()
+              }
+            }
             await botService.sendAnalytics(chatId, discountedProducts)
           }
         }
         catch (error) {
+          hasErrors = true
           logger.error(`Error during products check for ${chatId}:`, error)
           continue
         }
       }
+
+      reportService.recordCheck(!hasErrors, totalProducts)
     }
     catch (error) {
+      reportService.recordCheck(false, 0)
       logger.error('Error during products check:', error)
-      // throw error
     }
     finally {
       if (ozonService) {

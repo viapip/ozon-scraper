@@ -38,6 +38,7 @@ export class ProductService {
       productId: product.id,
       price: product.price,
       timestamp: product.timestamp,
+      inStock: product.inStock,
     }
 
     try {

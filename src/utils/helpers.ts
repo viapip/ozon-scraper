@@ -39,32 +39,49 @@ interface CookieParams {
 
 const ALLOWED_COOKIES = ['__Secure-access-token', '__Secure-refresh-token', '__Secure-user-id']
 
-export function parseCookieString(cookieString: string) {
-  const lines = cookieString.split('\n')
-  const cookies: CookieParams[] = []
+export function parseCookieString(cookieString: string): CookieParams[] {
+  return cookieString
+    .split('\n')
+    .filter(line => line.trim())
+    .map((line) => {
+      const parts = line.split(';')
+        .map(part => part.trim())
+      const [nameValue, ...attributes] = parts
+      const [name, value] = nameValue.split('=')
 
-  for (const line of lines) {
-    const trimmedLine = line.trim()
-    if (!trimmedLine) {
-      continue
-    }
-
-    const [name, value] = trimmedLine.split('=')
-      .map(part => part.trim())
-
-    if (name && ALLOWED_COOKIES.includes(name)) {
-      cookies.push({
+      const cookie: CookieParams = {
         name,
         value: value || '',
-        domain: '.ozon.ru',
+        domain: '',
         path: '/',
-        secure: true,
-        sameSite: 'Lax',
-      })
-    }
-  }
+        secure: false,
+        sameSite: 'None',
+      }
 
-  return cookies
+      for (const attr of attributes) {
+        const [key, val] = attr.split('=')
+          .map(s => s.toLowerCase()
+            .trim())
+        if (key === 'domain') {
+          cookie.domain = val
+        }
+        if (key === 'path') {
+          cookie.path = val
+        }
+        if (key === 'secure') {
+          cookie.secure = true
+        }
+        if (key === 'samesite') {
+          cookie.sameSite = val as CookieParams['sameSite']
+        }
+      }
+
+      return cookie
+    })
+}
+
+export function fromMinutes(minutes: number): number {
+  return minutes * 60 * 1000
 }
 
 export async function readCookiesFromFile(filePath: string): Promise<string> {
@@ -79,16 +96,21 @@ export async function readCookiesFromFile(filePath: string): Promise<string> {
   }
 }
 
-export async function saveCookiesToFile(filePath: string, cookies: { name: string, value: string, domain?: string }[]) {
-  try {
-    const fullPath = path.resolve(process.cwd(), filePath)
-    const filteredCookies = cookies.filter(cookie => ALLOWED_COOKIES.includes(cookie.name))
+export async function saveCookiesToFile(path: string, cookies: any[]): Promise<void> {
+  const cookieString = cookies
+    .map((cookie) => {
+      const { name, value, domain, path: cookiePath, secure, sameSite } = cookie
+      const parts = [
+        `${name}=${value}`,
+        domain && `domain=${domain}`,
+        cookiePath && `path=${cookiePath}`,
+        secure && 'secure',
+        sameSite && `samesite=${sameSite}`,
+      ].filter(Boolean)
 
-    const cookieStrings = filteredCookies.map(cookie => `${cookie.name}=${cookie.value}`)
+      return parts.join('; ')
+    })
+    .join('\n')
 
-    await fs.writeFile(fullPath, cookieStrings.join('\n'), 'utf8')
-  }
-  catch (error) {
-    throw new Error(`Ошибка сохранения cookies: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
+  await fs.writeFile(path, cookieString, 'utf8')
 }
