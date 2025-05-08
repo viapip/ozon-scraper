@@ -3,7 +3,9 @@ import path from 'node:path'
 import process from 'node:process'
 
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => {
+    return setTimeout(resolve, ms)
+  })
 }
 
 export function getRandomDelay(min: number, max: number): number {
@@ -20,21 +22,21 @@ export function isProductAvailable(price: number): boolean {
 
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
     currency: 'RUB',
+    style: 'currency',
   })
     .format(price)
 }
 
 interface CookieParams {
-  name: string
-  value: string
   domain?: string
-  path?: string
   expires?: number
   httpOnly?: boolean
+  name: string
+  path?: string
+  sameSite?: 'Lax' | 'None' | 'Strict'
   secure?: boolean
-  sameSite?: 'Strict' | 'Lax' | 'None'
+  value: string
 }
 
 // const ALLOWED_COOKIES = ['__Secure-access-token', '__Secure-refresh-token', '__Secure-user-id']
@@ -42,26 +44,32 @@ interface CookieParams {
 export function parseCookieString(cookieString: string): CookieParams[] {
   return cookieString
     .split('\n')
-    .filter(line => line.trim())
+    .filter((line) => {
+      return line.trim()
+    })
     .map((line) => {
       const parts = line.split(';')
-        .map(part => part.trim())
+        .map((part) => {
+          return part.trim()
+        })
       const [nameValue, ...attributes] = parts
       const [name, value] = nameValue.split('=')
 
       const cookie: CookieParams = {
-        name,
-        value: value || '',
         domain: '',
+        name,
         path: '/',
-        secure: false,
         sameSite: 'None',
+        secure: false,
+        value: value || '',
       }
 
       for (const attr of attributes) {
         const [key, val] = attr.split('=')
-          .map(s => s.toLowerCase()
-            .trim())
+          .map((s) => {
+            return s.toLowerCase()
+              .trim()
+          })
         if (key === 'domain') {
           cookie.domain = val
         }
@@ -99,7 +107,7 @@ export async function readCookiesFromFile(filePath: string): Promise<string> {
 export async function saveCookiesToFile(path: string, cookies: any[]): Promise<void> {
   const cookieString = cookies
     .map((cookie) => {
-      const { name, value, domain, path: cookiePath, secure, sameSite } = cookie
+      const { domain, name, path: cookiePath, sameSite, secure, value } = cookie
       const parts = [
         `${name}=${value}`,
         domain && `domain=${domain}`,

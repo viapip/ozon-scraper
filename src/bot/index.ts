@@ -1,36 +1,35 @@
-import { createConsola } from 'consola'
 import { Telegraf } from 'telegraf'
 
 import { formatPrice, validateUrl } from '../utils/helpers.js'
 
 import type { ProductAnalytics, User } from '../types/index.js'
 import type { Context } from 'telegraf'
+import { createLogger } from '../utils/logger.js'
 
-const logger = createConsola()
-  .withTag('BotService')
+const logger = createLogger('BotService')
 
-export interface BotServiceDependencies {
-  getProducts: (chatId: string) => Promise<ProductAnalytics[]>
-  clearUserProducts: (chatId: string) => Promise<void>
+export interface TelegramBotDependencies {
   addUser: (chatId: string) => Promise<void>
+  clearUserProducts: (chatId: string) => Promise<void>
+  getProducts: (chatId: string) => Promise<ProductAnalytics[]>
+  getReport: (chatId: string) => string
+  getUser: (chatId: string) => Promise<null | User>
+  setActive: (chatId: string, isActive: boolean) => Promise<void>
   setFavoriteList: (chatId: string, url: string) => Promise<string>
   stop: (chatId: string) => Promise<void>
-  getUser: (chatId: string) => Promise<User | null>
-  setActive: (chatId: string, isActive: boolean) => Promise<void>
-  getReport: (chatId: string) => string
 }
 
-export class BotService {
-  private bot: Telegraf
-  private isRunning = false
+export class TelegramBot {
   private batchSize: number
-  private dependencies: BotServiceDependencies
+  private bot: Telegraf
+  private dependencies: TelegramBotDependencies
+  private isRunning = false
 
   static readonly ITEM_SEPARATOR = '━━━━━━━━━━━━━━━━━━━━━━'
 
   constructor(
     token: string,
-    dependencies: BotServiceDependencies,
+    dependencies: TelegramBotDependencies,
     batchSize?: number,
   ) {
     logger.info('Bot service constructor')
@@ -227,7 +226,9 @@ export class BotService {
           this.isRunning = false
         })
 
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      await new Promise((resolve) => {
+        return setTimeout(resolve, 2000)
+      })
     }
     catch (error) {
       logger.error('Failed to initialize Telegram bot:', error)
@@ -259,7 +260,9 @@ export class BotService {
   private async sendBatchedMessages(chatId: string, messages: ProductAnalytics[], batchSize: number) {
     for (let i = 0; i < messages.length; i += batchSize) {
       const batch = messages.slice(i, i + batchSize)
-      const formattedMessages = batch.map(msg => this.formatAnalyticsMessage(msg))
+      const formattedMessages = batch.map((msg) => {
+        return this.formatAnalyticsMessage(msg)
+      })
       const messageText = this.formatMessage(formattedMessages, i)
 
       await this.sendTelegramMessage(chatId, messageText)
@@ -268,8 +271,8 @@ export class BotService {
 
   async sendTelegramMessage(chatId: string, text: string) {
     await this.bot.telegram.sendMessage(chatId, text, {
-      parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
+      parse_mode: 'HTML',
     })
   }
 
@@ -292,7 +295,7 @@ export class BotService {
   }
 
   private formatAnalyticsMessage(analytics: ProductAnalytics): string {
-    const { name, url, price: currentPrice } = analytics.current
+    const { name, price: currentPrice, url } = analytics.current
     const { price: minPrice } = analytics.minPrice
     const { price: maxPrice } = analytics.maxPrice
 
@@ -314,7 +317,7 @@ ${inStockText}<b>${productName}</b>
 📈 <code>${trend} ${priceChangeFormatted}</code>
 ℹ️ Min/Max: <code>${formatPrice(minPrice)}/${formatPrice(maxPrice)}</code>
 <a href="${url}">Открыть в Ozon ➜</a>
-${BotService.ITEM_SEPARATOR}`
+${TelegramBot.ITEM_SEPARATOR}`
   }
 
   private getPriceTrendSymbol(priceDiff: number): string {

@@ -1,15 +1,14 @@
 import fs from 'node:fs'
 
-import { createConsola } from 'consola'
 import { chromium } from 'playwright'
 
 import { delay, getRandomDelay, parseCookieString, saveCookiesToFile } from '../utils/helpers.js'
+import { createLogger } from '../utils/logger.js'
 
 import type { OzonConfig, Product } from '../types/index.js'
 import type { Browser, BrowserContext, Page } from 'playwright'
 
-const logger = createConsola()
-  .withTag('OzonService')
+const logger = createLogger('OzonService')
 
 const BROWSER_ARGS = [
   '--disable-blink-features=AutomationControlled',
@@ -29,18 +28,18 @@ const BROWSER_HEADERS = {
   'sec-ch-ua': '"Chromium";v="128", "Not(A:Brand";v="24", "Google Chrome";v="128"',
   'sec-ch-ua-mobile': '?0',
   'sec-ch-ua-platform': '"Linux"',
-  'Upgrade-Insecure-Requests': '1',
-  'Sec-Fetch-Site': 'none',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-User': '?1',
   'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
 }
 
 export class OzonService {
   private browser: Browser | null = null
-  private context: BrowserContext | null = null
-  private page: Page | null = null
   private config: OzonConfig
+  private context: BrowserContext | null = null
+  private page: null | Page = null
 
   constructor(config: OzonConfig) {
     this.config = config
@@ -53,34 +52,47 @@ export class OzonService {
     })
 
     this.context = await this.browser.newContext({
-      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 },
       deviceScaleFactor: 1,
+      extraHTTPHeaders: BROWSER_HEADERS,
       hasTouch: false,
       isMobile: false,
       javaScriptEnabled: true,
       locale: 'ru-RU',
-      timezoneId: 'Europe/Moscow',
       permissions: ['geolocation', 'notifications'],
-      extraHTTPHeaders: BROWSER_HEADERS,
+      timezoneId: 'Europe/Moscow',
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+      viewport: { height: 1080, width: 1920 },
     })
 
     await this.context.addInitScript(() => {
       // Prevent detection of automated browser by overriding key browser properties
       // This helps bypass anti-bot mechanisms
-      Object.defineProperty(navigator, 'webdriver', { get: () => null })
+      Object.defineProperty(navigator, 'webdriver', { get: () => {
+        return null
+      } })
 
       // Emulate browser plugins to appear more like a real browser
-      const pluginArray = Array.from({ length: 3 }, () => ({
-        description: 'Chromium PDF Plugin',
-        filename: 'internal-pdf-viewer',
-        name: 'Chrome PDF Plugin',
-        length: 1,
-      }))
-      Object.defineProperty(navigator, 'plugins', { get: () => pluginArray })
+      const pluginArray = Array.from({ length: 3 }, () => {
+        return {
+          description: 'Chromium PDF Plugin',
+          filename: 'internal-pdf-viewer',
+          length: 1,
+          name: 'Chrome PDF Plugin',
+        }
+      })
+      Object.defineProperty(navigator, 'plugins', { get: () => {
+        return pluginArray
+      } })
 
       // Set realistic language preferences
-      Object.defineProperty(navigator, 'languages', { get: () => ['ru-RU', 'ru', 'en-US', 'en'] })
+      Object.defineProperty(navigator, 'languages', { get: () => {
+        return [
+          'ru-RU',
+          'ru',
+          'en-US',
+          'en',
+        ]
+      } })
 
       // Override permissions query to handle notifications more naturally
       const originalFunction = window.navigator.permissions.query
@@ -88,16 +100,18 @@ export class OzonService {
         // Special handling for notification permissions to appear more human-like
         if (parameters.name === 'notifications') {
           return Promise.resolve({
-            state: Notification.permission,
-            name: parameters.name,
-            onchange: null,
             addEventListener: () => {
               //
             },
+            dispatchEvent: () => {
+              return true
+            },
+            name: parameters.name,
+            onchange: null,
             removeEventListener: () => {
               //
             },
-            dispatchEvent: () => true,
+            state: Notification.permission,
           } as PermissionStatus)
         }
 
@@ -121,13 +135,15 @@ export class OzonService {
 
     // Load and validate cookies, ensuring they have correct domain settings
     const parsedCookies = parseCookieString(this.config.cookies)
-    const validCookies = parsedCookies.map(cookie => ({
-      ...cookie,
-      domain: cookie.domain || '.ozon.ru',
-      path: cookie.path || '/',
-      secure: true,
-      sameSite: 'None' as const,
-    }))
+    const validCookies = parsedCookies.map((cookie) => {
+      return {
+        ...cookie,
+        domain: cookie.domain || '.ozon.ru',
+        path: cookie.path || '/',
+        sameSite: 'None' as const,
+        secure: true,
+      }
+    })
 
     await this.context.addCookies(validCookies)
     logger.info(`Loaded ${validCookies.length} cookies from file`)
@@ -144,8 +160,8 @@ export class OzonService {
     }
 
     await this.page.goto(favoriteListUrl, {
-      waitUntil: 'domcontentloaded',
       timeout: 30000,
+      waitUntil: 'domcontentloaded',
     })
 
     const finalUrl = this.page.url()
@@ -176,16 +192,16 @@ export class OzonService {
 
     try {
       await this.page.goto(favoriteListUrl, {
-        waitUntil: 'domcontentloaded',
         timeout: 15000,
+        waitUntil: 'domcontentloaded',
       })
 
       await this.handleAccessRestriction(this.page)
 
       logger.info('Waiting for main content to load...')
       await this.page.waitForSelector('[data-widget="searchResultsV2"]', {
-        timeout: 30000,
         state: 'visible',
+        timeout: 30000,
       })
 
       // Simulate human behavior
@@ -199,9 +215,10 @@ export class OzonService {
 
       // Save all cookies after successful page load
       const cookies = await this.context.cookies()
-      const relevantCookies = cookies.filter(cookie =>
-        cookie.domain?.includes('ozon.ru')
-        || cookie.domain?.includes('.ozon.ru'),
+      const relevantCookies = cookies.filter((cookie) => {
+        return cookie.domain?.includes('ozon.ru')
+          || cookie.domain?.includes('.ozon.ru')
+      },
       )
 
       logger.info(`Saving ${relevantCookies.length} cookies to file`)
@@ -213,7 +230,7 @@ export class OzonService {
     catch (error) {
       logger.error('Error loading page:', error)
       if (this.page) {
-        await this.page.screenshot({ path: 'reports/error-screenshot.png', fullPage: true })
+        await this.page.screenshot({ fullPage: true, path: 'reports/error-screenshot.png' })
         fs.writeFileSync('reports/error-page.html', await this.page.content())
       }
       throw error
@@ -297,46 +314,48 @@ export class OzonService {
 
   // Extract product details from the page
   private async extractProducts(page: Page): Promise<Product[]> {
-    return await page.$$eval('.widget-search-result-container .tile-root', elements => elements.map((item) => {
+    return await page.$$eval('.widget-search-result-container .tile-root', (elements) => {
+      return elements.map((item) => {
       // Find all product links and use the last one (most specific)
-      const productLinks = Array.from(item.querySelectorAll('a[href*="/product/"]'))
-      const mainProductLink = productLinks[productLinks.length - 1] as HTMLAnchorElement
+        const productLinks = Array.from(item.querySelectorAll('a[href*="/product/"]'))
+        const mainProductLink = productLinks[productLinks.length - 1] as HTMLAnchorElement
 
-      const nameElement = mainProductLink?.querySelector('span')
+        const nameElement = mainProductLink?.querySelector('span')
 
-      // Construct full URL and extract product ID
-      const url = window.location.origin + mainProductLink?.getAttribute('href') || ''
-      const id = url.match(/\/product\/([^/?]+)/)?.[1] || ''
+        // Construct full URL and extract product ID
+        const url = window.location.origin + mainProductLink?.getAttribute('href') || ''
+        const id = url.match(/\/product\/([^/?]+)/)?.[1] || ''
 
-      // Find price elements using a regex to match price format
-      const allTextElements = Array.from(item.querySelectorAll('*'))
-      const priceElements = allTextElements.filter((el) => {
-        const text = el.textContent?.trim() || ''
+        // Find price elements using a regex to match price format
+        const allTextElements = Array.from(item.querySelectorAll('*'))
+        const priceElements = allTextElements.filter((el) => {
+          const text = el.textContent?.trim() || ''
 
-        // Match prices in rubles (e.g., 1 000 ₽ or 500₽)
-        return (/^\d[\d\s]*₽$/).test(text)
+          // Match prices in rubles (e.g., 1 000 ₽ or 500₽)
+          return (/^\d[\d\s]*₽$/).test(text)
+        })
+
+        // Parse price, handling potential formatting
+        const priceText = priceElements[0]?.textContent || '0 ₽'
+        const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
+
+        // Determine stock status (not in stock if price is 0 and "Similar" text exists)
+        let inStock = true
+        if (price === 0 && item.textContent?.includes('Похожие')) {
+          inStock = false
+        }
+
+        return {
+          id,
+          inStock,
+          name: nameElement?.textContent?.trim() || '',
+          price,
+          timestamp: new Date()
+            .getTime(),
+          url,
+        }
       })
-
-      // Parse price, handling potential formatting
-      const priceText = priceElements[0]?.textContent || '0 ₽'
-      const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
-
-      // Determine stock status (not in stock if price is 0 and "Similar" text exists)
-      let inStock = true
-      if (price === 0 && item.textContent?.includes('Похожие')) {
-        inStock = false
-      }
-
-      return {
-        id,
-        name: nameElement?.textContent?.trim() || '',
-        url,
-        price,
-        inStock,
-        timestamp: new Date()
-          .getTime(),
-      }
-    }))
+    })
   }
 
   // Smoothly scroll to the bottom of the page
@@ -352,8 +371,8 @@ export class OzonService {
       // Smoothly scroll by the random step
       await page.evaluate((step) => {
         window.scrollBy({
-          top: step,
           behavior: 'smooth',
+          top: step,
         })
       }, scrollStep)
 

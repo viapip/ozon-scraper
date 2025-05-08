@@ -1,6 +1,4 @@
-import consola from 'consola'
-
-import type { ProductService } from './ProductService.js'
+import type { ProductService } from './product.js'
 import type { PriceHistory, ProductAnalytics } from '../types/index.js'
 
 // const logger = consola.withTag('AnalyticsService')
@@ -29,16 +27,16 @@ export class AnalyticsService {
     const priceDiffPercent = product.price && this.calculatePriceChange(product.price, prevPrice)
 
     return {
-      minPrice: minPriceItem,
-      maxPrice: maxPriceItem,
-      current: product,
-      priceDiffPercent,
       becameAvailable,
       becameUnavailable,
+      current: product,
+      maxPrice: maxPriceItem,
+      minPrice: minPriceItem,
+      priceDiffPercent,
     }
   }
 
-  private findExtremePrice(history: PriceHistory[], type: 'min' | 'max'): PriceHistory {
+  private findExtremePrice(history: PriceHistory[], type: 'max' | 'min'): PriceHistory {
     return history.reduce((extreme, current) => {
       // fix for min price when product is not available
       if (!extreme.inStock || !current.inStock) {

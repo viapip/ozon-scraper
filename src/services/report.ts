@@ -1,16 +1,14 @@
-import { createConsola } from 'consola'
-
 // const logger = createConsola()
 //   .withTag('ReportService')
 
 export interface ApplicationStats {
-  totalChecks: number
   failedChecks: number
   lastCheckTime: Date | null
-  totalProductsTracked: number
-  totalPriceDrops: number
-  totalAvailabilityChanges: number
   startTime: Date
+  totalAvailabilityChanges: number
+  totalChecks: number
+  totalPriceDrops: number
+  totalProductsTracked: number
 }
 
 export class ReportService {
@@ -18,13 +16,13 @@ export class ReportService {
 
   constructor() {
     this.stats = {
-      totalChecks: 0,
       failedChecks: 0,
       lastCheckTime: null,
-      totalProductsTracked: 0,
-      totalPriceDrops: 0,
-      totalAvailabilityChanges: 0,
       startTime: new Date(),
+      totalAvailabilityChanges: 0,
+      totalChecks: 0,
+      totalPriceDrops: 0,
+      totalProductsTracked: 0,
     }
   }
 
@@ -85,11 +83,11 @@ export class ReportService {
 
   private formatDate(date: Date): string {
     return date.toLocaleString('ru-RU', {
-      year: 'numeric',
-      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
     })
   }
 }

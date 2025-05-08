@@ -1,36 +1,35 @@
 import process from 'node:process'
 
-import { createConsola } from 'consola'
 import dotenv from 'dotenv'
 
 // import json from '../test-product.json'
 
-import { AnalyticsService } from './services/AnalyticsService.js'
-import { BotService } from './services/BotService.js'
-import { OzonService } from './services/OzonService.js'
-import { ProductService } from './services/ProductService.js'
-import { ReportService } from './services/ReportService.js'
-import { SchedulerService } from './services/SchedulerService.js'
-import { UserService } from './services/UserService.js'
+import { AnalyticsService } from './services/analytics.js'
+import { TelegramBot } from './bot/index.js'
+import { OzonService } from './services/ozon.js'
+import { ProductService } from './services/product.js'
+import { ReportService } from './services/report.js'
+import { SchedulerService } from './services/scheduler.js'
+import { UserService } from './services/user.js'
 import { readCookiesFromFile } from './utils/helpers.js'
+import { createLogger } from './utils/logger.js'
 
-import type { BotServiceDependencies } from './services/BotService.js'
+import type { TelegramBotDependencies } from './bot/index.js'
 import type { Product, ProductAnalytics } from './types/index.js'
 
-const logger = createConsola()
-  .withTag('App')
+const logger = createLogger('App')
 dotenv.config()
 
 interface AppConfig {
   ozon: {
     userAgent: string
   }
+  scheduler: {
+    checkInterval: number
+  }
   telegram: {
     botToken: string
     adminChatId: string
-  }
-  scheduler: {
-    checkInterval: number
   }
 }
 
@@ -39,12 +38,12 @@ function validateConfig(): AppConfig {
     ozon: {
       userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
     },
-    telegram: {
-      botToken: process.env.TELEGRAM_BOT_TOKEN || '',
-      adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || '',
-    },
     scheduler: {
       checkInterval: Number(process.env.SCHEDULER_CHECK_INTERVAL) || 30,
+    },
+    telegram: {
+      adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || '',
+      botToken: process.env.TELEGRAM_BOT_TOKEN || '',
     },
   }
 
@@ -62,7 +61,7 @@ class AppServices {
   constructor(
     public readonly productService: ProductService,
     public readonly analyticsService: AnalyticsService,
-    public readonly botService: BotService,
+    public readonly botService: TelegramBot,
     public readonly scheduler: SchedulerService,
     public readonly reportService: ReportService,
   ) {}
@@ -93,7 +92,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
     userAgent: config.ozon.userAgent,
   })
 
-  const botDependencies: BotServiceDependencies = {
+  const botDependencies: TelegramBotDependencies = {
     getProducts: async (chatId: string) => {
       const userProducts = await userService.getUserProducts(chatId)
       const products = await productService.getProductsByIds(userProducts)
@@ -115,7 +114,9 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
       await userService.setActive(chatId, isActive)
     },
 
-    getUser: async (chatId: string) => await userService.getUser(chatId),
+    getUser: async (chatId: string) => {
+      return await userService.getUser(chatId)
+    },
 
     setFavoriteList: async (chatId: string, url: string) => {
       logger.info(`Adding favorite list for chat ${chatId}`)
@@ -141,7 +142,7 @@ async function initializeServices(config: AppConfig): Promise<AppServices> {
     },
   }
 
-  const botService = new BotService(
+  const botService = new TelegramBot(
     config.telegram.botToken,
     botDependencies,
   )
@@ -184,7 +185,7 @@ function createCheckProductsHandler(
   ozonService: OzonService,
   productService: ProductService,
   analyticsService: AnalyticsService,
-  botService: BotService,
+  botService: TelegramBot,
   userService: UserService,
   reportService: ReportService,
   config: AppConfig,
@@ -199,7 +200,7 @@ function createCheckProductsHandler(
       let hasErrors = false
 
       for (const user of users) {
-        const { favoriteListId, chatId, isActive } = user
+        const { chatId, favoriteListId, isActive } = user
         logger.info(`User: ${chatId}`)
 
         if (!favoriteListId) {
@@ -223,9 +224,13 @@ function createCheckProductsHandler(
           logger.info(`Found products: ${products.length}`)
           const analyticsArray = await getAnalyticsProducts(products, productService, analyticsService)
 
-          await userService.updateUserProducts(chatId, products.map(product => product.id))
+          await userService.updateUserProducts(chatId, products.map((product) => {
+            return product.id
+          }))
 
-          const discountedProducts = analyticsArray.filter(analytics => analytics.priceDiffPercent < 0 || analytics.becameAvailable || analytics.becameUnavailable)
+          const discountedProducts = analyticsArray.filter((analytics) => {
+            return analytics.priceDiffPercent < 0 || analytics.becameAvailable || analytics.becameUnavailable
+          })
 
           logger.info(`Discounted products for ${chatId}: ${discountedProducts.length}`)
 

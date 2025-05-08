@@ -1,10 +1,9 @@
-import { consola } from 'consola'
-
-import { StorageService } from './StorageService.js'
+import { StorageService } from './storage.js'
 
 import type { User } from '../types/index.js'
+import { createLogger } from '../utils/logger.js'
 
-const logger = consola.withTag('UserService')
+const logger = createLogger('UserService')
 
 export class UserService {
   private static readonly USER_PREFIX = 'user:'
@@ -32,8 +31,8 @@ export class UserService {
       const user: User = {
         chatId,
         createdAt: Date.now(),
-        lastActivityAt: Date.now(),
         isActive: false,
+        lastActivityAt: Date.now(),
         products: [],
       }
 
@@ -48,7 +47,7 @@ export class UserService {
     }
   }
 
-  async getUser(chatId: string): Promise<User | null> {
+  async getUser(chatId: string): Promise<null | User> {
     try {
       const key = this.getUserKey(chatId)
       const user = await this.storageService.getItem(key)
@@ -60,7 +59,7 @@ export class UserService {
     }
   }
 
-  async updateUser(chatId: string, updates: Partial<User>): Promise<User | null> {
+  async updateUser(chatId: string, updates: Partial<User>): Promise<null | User> {
     try {
       const user = await this.getUser(chatId)
       if (!user) {
@@ -87,7 +86,7 @@ export class UserService {
     }
   }
 
-  async updateUserProducts(chatId: string, products: string[]): Promise<User | null> {
+  async updateUserProducts(chatId: string, products: string[]): Promise<null | User> {
     return this.updateUser(chatId, { products })
   }
 
@@ -97,15 +96,15 @@ export class UserService {
     return user?.products || []
   }
 
-  async setActive(chatId: string, isActive: boolean): Promise<User | null> {
+  async setActive(chatId: string, isActive: boolean): Promise<null | User> {
     return this.updateUser(chatId, { isActive })
   }
 
-  async setFavoriteList(chatId: string, listId: string): Promise<User | null> {
+  async setFavoriteList(chatId: string, listId: string): Promise<null | User> {
     return this.updateUser(chatId, { favoriteListId: listId })
   }
 
-  async removeFavoriteList(chatId: string): Promise<User | null> {
+  async removeFavoriteList(chatId: string): Promise<null | User> {
     return this.updateUser(chatId, { favoriteListId: undefined })
   }
 
@@ -130,7 +129,9 @@ export class UserService {
         return user
       })
 
-      return (await Promise.all(usersPromises)).filter((user): user is User => user !== null)
+      return (await Promise.all(usersPromises)).filter((user): user is User => {
+        return user !== null
+      })
     }
     catch (error) {
       logger.error('Failed to get all users:', error)

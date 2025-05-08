@@ -14,7 +14,7 @@ export class StorageService<T> {
     await this.db.put(key, JSON.stringify(item))
   }
 
-  async getItem(key: string): Promise<T | null> {
+  async getItem(key: string): Promise<null | T> {
     try {
       const value = await this.db.get(key)
 

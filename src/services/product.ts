@@ -1,30 +1,33 @@
-import { consola } from 'consola'
 import { subMonths } from 'date-fns'
 
-import { StorageService } from './StorageService.js'
+import { createLogger } from '../utils/logger.js'
+
+import { StorageService } from './storage.js'
 
 import type { PriceHistory, Product } from '../types/index.js'
 
-const logger = consola.withTag('ProductService')
+const logger = createLogger('ProductService')
 export class ProductService {
-  private static readonly PRODUCT_PREFIX = 'product:'
   private static readonly HISTORY_PREFIX = 'history:'
+  private static readonly PRODUCT_PREFIX = 'product:'
 
-  private readonly storageService: StorageService<Product | PriceHistory>
+  private readonly storageService: StorageService<PriceHistory | Product>
 
   constructor() {
-    this.storageService = new StorageService<Product | PriceHistory >('db/products')
+    this.storageService = new StorageService<PriceHistory | Product >('db/products')
   }
 
-  async getProduct(productId: string): Promise<Product | null> {
-    return await this.storageService.getItem(`product:${productId}`) as Product | null
+  async getProduct(productId: string): Promise<null | Product> {
+    return await this.storageService.getItem(`product:${productId}`) as null | Product
   }
 
   async getAllProducts(): Promise<Product[]> {
     // Retrieve all product keys and fetch their corresponding items
     const keys = await this.storageService.getAllKeys(ProductService.PRODUCT_PREFIX)
     logger.info(`Found ${keys.length} products`)
-    const products = await Promise.all(keys.map(async key => await this.storageService.getItem(key)))
+    const products = await Promise.all(keys.map(async (key) => {
+      return await this.storageService.getItem(key)
+    }))
 
     return products as Product[]
   }
@@ -32,15 +35,17 @@ export class ProductService {
   async getProductsByIds(productIds: string[]): Promise<Product[]> {
     const products = await this.getAllProducts()
 
-    return products.filter(product => productIds.includes(product.id))
+    return products.filter((product) => {
+      return productIds.includes(product.id)
+    })
   }
 
   async saveProduct(product: Product): Promise<void> {
     const priceHistory: PriceHistory = {
-      productId: product.id,
-      price: product.price,
-      timestamp: product.timestamp,
       inStock: product.inStock,
+      price: product.price,
+      productId: product.id,
+      timestamp: product.timestamp,
     }
 
     try {

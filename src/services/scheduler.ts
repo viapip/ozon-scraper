@@ -1,9 +1,7 @@
-import { createConsola } from 'consola'
+import { fromMinutes } from '../utils/helpers.js'
+import { createLogger } from '../utils/logger.js'
 
-import { fromMinutes, getRandomDelay } from '../utils/helpers.js'
-
-const logger = createConsola()
-  .withTag('SchedulerService')
+const logger = createLogger('SchedulerService')
 
 export class SchedulerService {
   private interval: NodeJS.Timeout | null = null
