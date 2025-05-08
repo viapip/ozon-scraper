@@ -1,4 +1,3 @@
-# Dependencies stage
 FROM node:20-slim AS deps
 
 WORKDIR /app
@@ -28,11 +27,11 @@ COPY . .
 RUN yarn build
 
 # Final stage
-FROM node:20-slim
+FROM node:20-bookworm
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies and Playwright dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
@@ -58,6 +57,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libatspi2.0-0 \
     libasound2 \
     libcups2 \
+    # Missing Playwright Dependencies
+    libx11-xcb1 \
+    libxcursor1 \
+    libgtk-3-0 \
+    libcairo-gobject2 \
+    libgdk-pixbuf2.0-0 \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* \
     && corepack enable \
     && corepack prepare yarn@4.5.1 --activate
@@ -68,9 +73,12 @@ COPY --from=builder /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
 COPY --from=builder /app/.yarn ./.yarn
 COPY --from=builder /app/.cookies.example ./.cookies.example
 
-# Install production dependencies and Playwright
-RUN yarn workspaces focus --production \
-    && npx playwright install chromium
+# Install production dependencies
+RUN yarn workspaces focus --production
+
+RUN yarn add playwright
+# Install Playwright and browser
+RUN yarn playwright install --with-deps chromium
 
 ENV NODE_ENV=production
 

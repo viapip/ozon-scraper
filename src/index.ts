@@ -3,7 +3,7 @@ import process from 'node:process'
 import { createConsola } from 'consola'
 import dotenv from 'dotenv'
 
-import json from '../test-product.json'
+// import json from '../test-product.json'
 
 import { AnalyticsService } from './services/AnalyticsService.js'
 import { BotService } from './services/BotService.js'

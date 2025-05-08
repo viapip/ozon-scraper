@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  app:
+    image: viapip/ozon-bot:latest
+    container_name: ozon-tracker
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./.cookies:/app/.cookies
+      - ./db:/app/db
+      - ./reports:/app/reports
+    networks:
+      - app-network
+    # command: npx -y playwright@1.49.1 install chromium --with-deps && yarn start
+
+
+networks:
+  app-network:
+    driver: bridge
