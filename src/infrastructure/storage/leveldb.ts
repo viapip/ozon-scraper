@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { Level } from 'level'
-import { config } from '../../config/index.js'
+import { config } from '../../config/index'
 
 interface StorageOptions {
   basePath?: string

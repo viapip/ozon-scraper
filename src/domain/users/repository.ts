@@ -1,6 +1,6 @@
-import { createLogger } from '../../utils/logger.js'
-import { LevelDBStorage } from '../../infrastructure/storage/index.js'
-import type { User } from '../../types/index.js'
+import { createLogger } from '../../utils/logger'
+import { LevelDBStorage } from '../../infrastructure/storage/index'
+import type { User } from '../../types/index'
 
 const logger = createLogger('UserRepository')
 

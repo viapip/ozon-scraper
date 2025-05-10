@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
-import { formatTimeString, getTodayDateString } from './dates.js'
+import { formatTimeString, getTodayDateString } from './dates'
 
 /**
  * Sleep for a specified number of milliseconds

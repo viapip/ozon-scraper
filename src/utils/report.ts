@@ -1,5 +1,5 @@
-import { createLogger } from '../utils/logger.js'
-import { formatDate } from './formatting.js'
+import { createLogger } from '../utils/logger'
+import { formatDate } from './formatting'
 
 const logger = createLogger('ReportService')
 

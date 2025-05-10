@@ -1,6 +1,6 @@
-import { createLogger } from '../../utils/logger.js'
-import { UserRepository } from './repository.js'
-import type { User } from '../../types/index.js'
+import { createLogger } from '../../utils/logger'
+import { UserRepository } from './repository'
+import type { User } from '../../types/index'
 
 const logger = createLogger('UserService')
 

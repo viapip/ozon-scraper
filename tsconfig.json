@@ -2,11 +2,11 @@
   "$schema": "https://json.schemastore.org/tsconfig.json",
 
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM"],
-    "rootDir": ".",
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "rootDir": "./",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
 
     "noResolve": false,
 
@@ -17,16 +17,15 @@
     "allowJs": true,
     "strict": true,
     "alwaysStrict": true,
-    "exactOptionalPropertyTypes": false,
     "declaration": false,
 
     "importHelpers": true,
-    "outDir": "./dist",
+    "outDir": "dist",
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"]
+  "include": ["./src/**/*"]
 }

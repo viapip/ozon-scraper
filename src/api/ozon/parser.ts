@@ -1,4 +1,4 @@
-import { createLogger } from '../../utils/logger.js'
+import { createLogger } from '../../utils/logger'
 import type { Page } from 'playwright'
 import type { Product } from '../../types'
 
