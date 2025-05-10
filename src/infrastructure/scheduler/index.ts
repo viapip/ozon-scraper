@@ -1,5 +1,5 @@
 /**
  * Scheduler module for running recurring tasks
  */
-
-export { SchedulerOptions, SchedulerService } from './service'
+export type { SchedulerOptions } from './service'
+export { SchedulerService } from './service'
