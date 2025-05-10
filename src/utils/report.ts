@@ -1,5 +1,7 @@
-// const logger = createConsola()
-//   .withTag('ReportService')
+import { createLogger } from '../utils/logger.js'
+import { formatDate } from './formatting.js'
+
+const logger = createLogger('ReportService')
 
 export interface ApplicationStats {
   failedChecks: number
@@ -11,10 +13,15 @@ export interface ApplicationStats {
   totalProductsTracked: number
 }
 
+/**
+ * Service for tracking and reporting application statistics
+ */
 export class ReportService {
   private stats: ApplicationStats
 
   constructor() {
+    logger.debug('Initializing report service')
+
     this.stats = {
       failedChecks: 0,
       lastCheckTime: null,
@@ -26,7 +33,10 @@ export class ReportService {
     }
   }
 
-  public recordCheck(success: boolean, productsCount: number) {
+  /**
+   * Record a product check operation
+   */
+  public recordCheck(success: boolean, productsCount: number): void {
     this.stats.totalChecks++
     if (!success) {
       this.stats.failedChecks++
@@ -35,18 +45,30 @@ export class ReportService {
     this.stats.totalProductsTracked = productsCount
   }
 
-  public recordPriceDrop() {
+  /**
+   * Record a price drop
+   */
+  public recordPriceDrop(): void {
     this.stats.totalPriceDrops++
   }
 
-  public recordAvailabilityChange() {
+  /**
+   * Record an availability change
+   */
+  public recordAvailabilityChange(): void {
     this.stats.totalAvailabilityChanges++
   }
 
+  /**
+   * Get the current statistics
+   */
   public getStats(): ApplicationStats {
     return { ...this.stats }
   }
 
+  /**
+   * Get a formatted report string
+   */
   public getFormattedReport(): string {
     const uptime = this.getUptime()
     const successRate = this.getSuccessRate()
@@ -60,9 +82,12 @@ export class ReportService {
 🏷️ Products Tracked: ${this.stats.totalProductsTracked}
 💰 Total Price Drops: ${this.stats.totalPriceDrops}
 📦 Availability Changes: ${this.stats.totalAvailabilityChanges}
-🕐 Last Check: ${this.stats.lastCheckTime ? this.formatDate(this.stats.lastCheckTime) : 'Never'}`
+🕐 Last Check: ${this.stats.lastCheckTime ? formatDate(this.stats.lastCheckTime) : 'Never'}`
   }
 
+  /**
+   * Calculate uptime as a formatted string
+   */
   private getUptime(): string {
     const now = new Date()
     const diff = now.getTime() - this.stats.startTime.getTime()
@@ -73,21 +98,14 @@ export class ReportService {
     return `${days}d ${hours}h ${minutes}m`
   }
 
+  /**
+   * Calculate success rate as a percentage
+   */
   private getSuccessRate(): number {
     if (this.stats.totalChecks === 0) {
       return 100
     }
 
     return Number(((1 - this.stats.failedChecks / this.stats.totalChecks) * 100).toFixed(1))
-  }
-
-  private formatDate(date: Date): string {
-    return date.toLocaleString('ru-RU', {
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
   }
 }

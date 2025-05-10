@@ -15,7 +15,6 @@ services:
       - app-network
     # command: npx -y playwright@1.49.1 install chromium --with-deps && yarn start
 
-
 networks:
   app-network:
     driver: bridge

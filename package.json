@@ -18,11 +18,10 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.mjs"
     }
   },
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "typesVersions": {
@@ -40,18 +39,15 @@
     "build": "pkgroll",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.cjs",
+    "start": "node dist/index.mjs",
     "release": "yarn publish",
     "lint": "eslint --ext=ts,js,vue .",
     "clean": "yarn exec rm -rf dist"
   },
   "dependencies": {
-    "esm": "^3.2.25",
-    "esno": "^4.8.0",
     "level": "^8.0.1"
   },
   "devDependencies": {
-    "@types/esm": "^3.2.2",
     "@types/levelup": "^5.1.5",
     "@types/node": "^20.17.45",
     "@typescript-eslint/eslint-plugin": "^7.18.0",

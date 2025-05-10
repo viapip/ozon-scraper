@@ -1,68 +1,119 @@
-# Ozon Product Tracker
+# Ozon Scraper
 
-This is a Node.js application that tracks product prices and availability on Ozon.ru and sends notifications via Telegram.
+A tool for monitoring product prices and availability on Ozon.ru with Telegram notifications.
 
 ## Features
 
--   Tracks product price changes and availability.
--   Sends notifications to Telegram when a product's price drops or its availability changes.
--   Supports multiple users, each with their own favorite product lists.
--   Provides a report with application statistics.
+- 🔍 Track product price changes and availability
+- 📊 Historical price analytics
+- 🤖 Telegram bot interface for easy management
+- 👥 Multi-user support with individual tracking lists
+- 📋 Application performance reporting
+- 🔄 Scheduled automatic checks
 
-## Prerequisites
+## Architecture
 
--   Node.js (v18 or higher)
--   Yarn package manager
--   A Telegram bot token
--   A Telegram admin chat ID
--   Cookies for ozon.ru
+The application is built on a modular architecture:
 
-## Setup
+```
+src/
+├── api/                       # API interfaces for external services
+│   ├── ozon/                  # Ozon web scraping module
+│   └── telegram/              # Telegram messaging module
+├── config/                    # Application configuration
+├── domain/                    # Business logic
+│   ├── products/              # Products module
+│   ├── analytics/             # Analytics module
+│   └── users/                 # Users module
+├── infrastructure/            # Infrastructure code
+│   ├── scheduler/             # Scheduler module
+│   ├── storage/               # Storage module
+│   └── logger/                # Logging module
+├── utils/                     # Utilities
+├── types/                     # Common types
+├── app.ts                     # Application initialization
+└── index.ts                   # Entry point
+```
 
-1.  Clone the repository:
+## Requirements
 
-    ```bash
-    git clone <repository-url>
-    ```
-2.  Install dependencies:
+- Node.js (v18 or higher)
+- Yarn package manager
+- Telegram bot token
+- Telegram admin chat ID
+- Ozon.ru cookies
 
-    ```bash
-    yarn install
-    ```
-3.  Create a `.env` file in the root directory and add the following environment variables:
+## Installation
 
-    ```env
-    TELEGRAM_BOT_TOKEN=<your_telegram_bot_token>
-    TELEGRAM_ADMIN_CHAT_ID=<your_telegram_admin_chat_id>
-    ```
-4.  Place your ozon.ru cookies in a `.cookies` file in the root directory.
+1. Clone the repository:
 
-## Usage
+```bash
+git clone https://github.com/yourusername/ozon-scraper.git
+cd ozon-scraper
+```
 
-1.  Run the application:
+2. Install dependencies:
 
-    ```bash
-    yarn start
-    ```
-2.  Use the following commands in Telegram to interact with the bot:
+```bash
+yarn install
+```
 
-    -   `/getid` - Get your chat ID.
-    -   `/getall` - Get all products from your favorite list.
-    -   `/addlist <ozon_list_url>` - Add a favorite list to track.
-    -   `/adduser <chat_id>` - Add a user to the bot (admin only).
-    -   `/stop` - Stop tracking products.
-    -   `/report` - Get application statistics (admin only).
+3. Create a `.env` file in the root directory with the following variables:
 
-## Development
+```env
+# Required parameters
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_ADMIN_CHAT_ID=your_telegram_admin_chat_id
 
--   Use `yarn dev` to start the application in development mode.
--   Use `yarn test` to run tests.
--   Use `yarn build` to build the application.
+# Optional parameters
+SCHEDULER_CHECK_INTERVAL=30  # check interval in minutes
+LOG_LEVEL=info               # logging level (debug, info, warn, error)
+DATABASE_PATH=./db           # database path
+```
 
-## Contributing
+4. Create a `.cookies` file in the root directory with your Ozon.ru cookies
 
-Feel free to contribute to the project by submitting pull requests.
+## Running the Application
 
-## License
+1. Start the application:
 
-[MIT](LICENSE)
+```bash
+yarn start
+```
+
+2. For development:
+
+```bash
+yarn dev
+```
+
+## Telegram Bot Commands
+
+- `/start` - Initialize the bot and get your ID
+- `/getid` - Get your chat ID
+- `/activate <chat_id>` - Activate a user (admin only)
+- `/addlist <ozon_list_url>` - Add a wishlist for tracking
+- `/getall` - Show all tracked products
+- `/stop` - Stop tracking products
+- `/report` - Get application statistics (admin only)
+
+## How It Works
+
+1. User adds a public Ozon wishlist URL
+2. The system periodically checks for price and availability changes
+3. When changes are detected (price drops, availability changes), notifications are sent
+4. All price history is stored for later analysis
+
+## Technology Stack
+
+- TypeScript for type safety and code reliability
+- LevelDB for data storage
+- Playwright for browser automation
+- Telegraf for Telegram API integration
+
+## Key Features
+
+- Anti-detection techniques to bypass Ozon protections
+- Modular architecture for easy extension
+- Efficient price history storage
+- Support for multiple users with different product lists

@@ -1,25 +1,24 @@
-import { StorageService } from './storage.js'
-
-import type { User } from '../types/index.js'
-import { createLogger } from '../utils/logger.js'
+import { createLogger } from '../../utils/logger.js'
+import { UserRepository } from './repository.js'
+import type { User } from '../../types/index.js'
 
 const logger = createLogger('UserService')
 
+/**
+ * Service for managing users
+ */
 export class UserService {
-  private static readonly USER_PREFIX = 'user:'
-  private readonly storageService: StorageService<User>
+  private repository: UserRepository
 
   constructor() {
-    this.storageService = new StorageService<User>('db/users')
+    this.repository = new UserRepository()
   }
 
-  private getUserKey(chatId: string): string {
-    return `${UserService.USER_PREFIX}${chatId}`
-  }
-
+  /**
+   * Create a new user
+   */
   async createUser(chatId: string): Promise<User> {
     try {
-      const key = this.getUserKey(chatId)
       const existingUser = await this.getUser(chatId)
 
       if (existingUser) {
@@ -36,7 +35,7 @@ export class UserService {
         products: [],
       }
 
-      await this.storageService.saveItem(key, user)
+      await this.repository.saveUser(user)
       logger.info(`Created user ${chatId}`)
 
       return user
@@ -47,18 +46,16 @@ export class UserService {
     }
   }
 
+  /**
+   * Get a user by chat ID
+   */
   async getUser(chatId: string): Promise<null | User> {
-    try {
-      const key = this.getUserKey(chatId)
-      const user = await this.storageService.getItem(key)
-
-      return user || null
-    }
-    catch {
-      return null
-    }
+    return this.repository.getUser(chatId)
   }
 
+  /**
+   * Update a user
+   */
   async updateUser(chatId: string, updates: Partial<User>): Promise<null | User> {
     try {
       const user = await this.getUser(chatId)
@@ -74,8 +71,7 @@ export class UserService {
         lastActivityAt: Date.now(),
       }
 
-      const key = this.getUserKey(chatId)
-      await this.storageService.saveItem(key, updatedUser)
+      await this.repository.saveUser(updatedUser)
       logger.info(`Updated user ${chatId}`)
 
       return updatedUser
@@ -86,32 +82,49 @@ export class UserService {
     }
   }
 
+  /**
+   * Update a user's products
+   */
   async updateUserProducts(chatId: string, products: string[]): Promise<null | User> {
     return this.updateUser(chatId, { products })
   }
 
+  /**
+   * Get a user's products
+   */
   async getUserProducts(chatId: string): Promise<string[]> {
     const user = await this.getUser(chatId)
 
     return user?.products || []
   }
 
+  /**
+   * Set a user's active status
+   */
   async setActive(chatId: string, isActive: boolean): Promise<null | User> {
     return this.updateUser(chatId, { isActive })
   }
 
+  /**
+   * Set a user's favorite list
+   */
   async setFavoriteList(chatId: string, listId: string): Promise<null | User> {
     return this.updateUser(chatId, { favoriteListId: listId })
   }
 
+  /**
+   * Remove a user's favorite list
+   */
   async removeFavoriteList(chatId: string): Promise<null | User> {
     return this.updateUser(chatId, { favoriteListId: undefined })
   }
 
+  /**
+   * Delete a user
+   */
   async deleteUser(chatId: string): Promise<void> {
     try {
-      const key = this.getUserKey(chatId)
-      await this.storageService.deleteItem(key)
+      await this.repository.deleteUser(chatId)
       logger.info(`Deleted user ${chatId}`)
     }
     catch (error) {
@@ -120,23 +133,28 @@ export class UserService {
     }
   }
 
+  /**
+   * Get all users
+   */
   async getAllUsers(): Promise<User[]> {
-    try {
-      const keys = await this.storageService.getAllKeys(UserService.USER_PREFIX)
-      const usersPromises = keys.map(async (key) => {
-        const user = await this.storageService.getItem(key)
+    return this.repository.getAllUsers()
+  }
 
-        return user
-      })
+  /**
+   * Get all active users
+   */
+  async getActiveUsers(): Promise<User[]> {
+    const users = await this.getAllUsers()
 
-      return (await Promise.all(usersPromises)).filter((user): user is User => {
-        return user !== null
-      })
-    }
-    catch (error) {
-      logger.error('Failed to get all users:', error)
+    return users.filter((user) => {
+      return user.isActive
+    })
+  }
 
-      return []
-    }
+  /**
+   * Close the service
+   */
+  async close(): Promise<void> {
+    await this.repository.close()
   }
 }

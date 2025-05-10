@@ -1,10 +1,10 @@
 import { Telegraf } from 'telegraf'
 
-import { formatPrice, validateUrl } from '../utils/helpers.js'
+import { formatPrice, validateUrl } from '../utils/helpers'
 
-import type { ProductAnalytics, User } from '../types/index.js'
+import type { ProductAnalytics, User } from '../types/index'
 import type { Context } from 'telegraf'
-import { createLogger } from '../utils/logger.js'
+import { createLogger } from '../utils/logger'
 
 const logger = createLogger('BotService')
 

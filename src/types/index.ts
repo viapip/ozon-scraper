@@ -6,33 +6,33 @@ export interface OzonConfig {
 
 export interface Product {
   id: string
+  inStock: boolean
   name: string
-  url: string
   price: number
   timestamp: number
-  inStock: boolean
+  url: string
 }
 
 export interface PriceHistory {
-  productId: string
-  price: number
   inStock: boolean
+  price: number
+  productId: string
   timestamp: number
 }
 
 export interface ProductAnalytics {
-  minPrice: PriceHistory
-  maxPrice: PriceHistory
-  current: Product
-  priceDiffPercent: number
   becameAvailable: boolean
   becameUnavailable: boolean
+  current: Product
+  maxPrice: PriceHistory
+  minPrice: PriceHistory
+  priceDiffPercent: number
 }
 
 export interface ProductListUrl {
-  url: string
-  timestamp: number
   chatId: string
+  timestamp: number
+  url: string
 }
 
 export interface UserProductAnalytics extends ProductAnalytics {
@@ -41,9 +41,9 @@ export interface UserProductAnalytics extends ProductAnalytics {
 
 export interface User {
   chatId: string
-  favoriteListId?: string
   createdAt: number
-  lastActivityAt: number
+  favoriteListId?: string
   isActive: boolean
+  lastActivityAt: number
   products: string[]
 }
