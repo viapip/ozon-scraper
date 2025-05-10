@@ -13,6 +13,17 @@ export function delay(ms: number): Promise<void> {
 }
 
 /**
+ * Format a price value
+ */
+export function formatPrice(price: number): string {
+  return new Intl.NumberFormat('ru-RU', {
+    currency: 'RUB',
+    style: 'currency',
+  })
+    .format(price)
+}
+
+/**
  * Get a random delay value between min and max
  */
 export function getRandomDelay(min: number, max: number): number {

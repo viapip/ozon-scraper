@@ -18,13 +18,13 @@ const logger = createLogger('App')
  * Main application class
  */
 export class App {
-  private analyticsService: AnalyticsService
-  private ozonService: OzonService
-  private productService: ProductService
-  private reportService: ReportService
-  private scheduler: SchedulerService
-  private telegramService: TelegramService
-  private userService: UserService
+  private analyticsService!: AnalyticsService
+  private ozonService!: OzonService
+  private productService!: ProductService
+  private reportService!: ReportService
+  private scheduler!: SchedulerService
+  private telegramService!: TelegramService
+  private userService!: UserService
 
   private initialized = false
 
