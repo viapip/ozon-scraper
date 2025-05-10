@@ -1,5 +1,5 @@
-import { createLogger } from '../../utils/logger'
 import { fromMinutes, getRandomDelay } from '../../utils/dates'
+import { createLogger } from '../../utils/logger'
 
 const logger = createLogger('SchedulerService')
 

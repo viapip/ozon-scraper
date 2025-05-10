@@ -1,5 +1,6 @@
-import { formatPrice } from '../../utils/formatting'
 import type { ProductAnalytics } from '../../types/index'
+
+import { formatPrice } from '../../utils/formatting'
 
 /**
  * Formats messages for Telegram

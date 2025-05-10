@@ -1,6 +1,7 @@
 import process from 'node:process'
-import { createLogger } from './utils/logger'
+
 import { App } from './app'
+import { createLogger } from './utils/logger'
 
 const logger = createLogger('Main')
 

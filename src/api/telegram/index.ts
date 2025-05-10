@@ -1,10 +1,11 @@
 import { Telegraf } from 'telegraf'
-import { createLogger } from '../../utils/logger'
-import type { CommandHandlerDependencies } from './commands'
-import { TelegramCommandHandler } from './commands'
-import { TelegramFormatter } from './formatter'
 
 import type { ProductAnalytics } from '../../types'
+import type { CommandHandlerDependencies } from './commands'
+
+import { createLogger } from '../../utils/logger'
+import { TelegramCommandHandler } from './commands'
+import { TelegramFormatter } from './formatter'
 
 const logger = createLogger('TelegramService')
 

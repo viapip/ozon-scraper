@@ -1,9 +1,10 @@
+import type { Context } from 'telegraf'
+
+import type { ProductAnalytics, User } from '../../types'
+
+import { validateUrl } from '../../utils/formatting'
 import { createLogger } from '../../utils/logger'
 import { TelegramFormatter } from './formatter'
-import { validateUrl } from '../../utils/formatting'
-
-import type { Context } from 'telegraf'
-import type { ProductAnalytics, User } from '../../types'
 
 const logger = createLogger('TelegramCommands')
 

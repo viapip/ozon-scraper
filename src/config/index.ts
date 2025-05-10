@@ -1,6 +1,6 @@
-import process from 'node:process'
-import path from 'node:path'
 import dotenv from 'dotenv'
+import path from 'node:path'
+import process from 'node:process'
 
 import type { AppConfig, LogConfig } from './types'
 

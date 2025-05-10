@@ -1,6 +1,8 @@
-import { createLogger } from '../../utils/logger'
 import type { Page } from 'playwright'
+
 import type { Product } from '../../types'
+
+import { createLogger } from '../../utils/logger'
 
 const logger = createLogger('OzonParser')
 

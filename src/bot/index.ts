@@ -1,9 +1,10 @@
+import type { Context } from 'telegraf'
+
 import { Telegraf } from 'telegraf'
 
-import { formatPrice, validateUrl } from '../utils/helpers'
-
 import type { ProductAnalytics, User } from '../types/index'
-import type { Context } from 'telegraf'
+
+import { formatPrice, validateUrl } from '../utils/helpers'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('BotService')

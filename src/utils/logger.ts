@@ -1,9 +1,8 @@
-import process from 'node:process'
-import fs from 'node:fs/promises'
-import path from 'node:path'
-
 import { createConsola, LogLevels } from 'consola'
 import { format } from 'date-fns'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import process from 'node:process'
 
 /**
  * Creates and configures a structured logger

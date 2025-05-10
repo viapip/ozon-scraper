@@ -1,16 +1,16 @@
-import { config } from './config/index'
-import { createLogger } from './utils/logger'
-import { SchedulerService } from './infrastructure/scheduler/index'
-import { OzonService } from './api/ozon/index'
-import { TelegramService } from './api/telegram/index'
-import { ProductService } from './domain/products/index'
-import { UserService } from './domain/users/index'
-import { AnalyticsService } from './domain/analytics/index'
-import { readCookiesFromFile } from './utils/helpers'
-import { ReportService } from './utils/report'
-
 import type { CommandHandlerDependencies } from './api/telegram/commands'
 import type { Product, ProductAnalytics } from './types/index'
+
+import { OzonService } from './api/ozon/index'
+import { TelegramService } from './api/telegram/index'
+import { config } from './config/index'
+import { AnalyticsService } from './domain/analytics/index'
+import { ProductService } from './domain/products/index'
+import { UserService } from './domain/users/index'
+import { SchedulerService } from './infrastructure/scheduler/index'
+import { readCookiesFromFile } from './utils/helpers'
+import { createLogger } from './utils/logger'
+import { ReportService } from './utils/report'
 
 const logger = createLogger('App')
 

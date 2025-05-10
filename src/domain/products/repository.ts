@@ -1,7 +1,9 @@
 import { subMonths } from 'date-fns'
-import { createLogger } from '../../utils/logger'
-import { LevelDBStorage } from '../../infrastructure/storage/index'
+
 import type { PriceHistory, Product } from '../../types'
+
+import { LevelDBStorage } from '../../infrastructure/storage/index'
+import { createLogger } from '../../utils/logger'
 
 const logger = createLogger('ProductRepository')
 

@@ -1,6 +1,7 @@
+import type { PriceHistory, Product } from '../../types/index'
+
 import { createLogger } from '../../utils/logger'
 import { ProductRepository } from './repository'
-import type { PriceHistory, Product } from '../../types/index'
 
 const logger = createLogger('ProductService')
 

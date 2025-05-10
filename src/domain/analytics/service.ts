@@ -1,7 +1,8 @@
-import { createLogger } from '../../utils/logger'
-import type { ProductService } from '../products/service'
 import type { PriceHistory, ProductAnalytics } from '../../types'
+import type { ProductService } from '../products/service'
 import type { AnalyticsSummary } from './types'
+
+import { createLogger } from '../../utils/logger'
 
 const logger = createLogger('AnalyticsService')
 

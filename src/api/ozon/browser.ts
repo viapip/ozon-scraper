@@ -1,10 +1,11 @@
+import type { Browser, BrowserContext, Page } from 'playwright'
+
 import fs from 'node:fs'
 import { chromium } from 'playwright'
-import { config } from '../../config/index'
-import { createLogger } from '../../utils/logger'
-import { delay, getRandomDelay, saveCookiesToFile } from '../../utils/browser-helpers'
 
-import type { Browser, BrowserContext, Page } from 'playwright'
+import { config } from '../../config/index'
+import { delay, getRandomDelay, saveCookiesToFile } from '../../utils/browser-helpers'
+import { createLogger } from '../../utils/logger'
 
 const logger = createLogger('OzonBrowser')
 

@@ -1,7 +1,8 @@
+import type { Product } from '../../types/index'
+
 import { createLogger } from '../../utils/logger'
 import { OzonBrowser } from './browser'
 import { OzonParser } from './parser'
-import type { Product } from '../../types/index'
 
 const logger = createLogger('OzonService')
 

@@ -1,5 +1,6 @@
-import fs from 'node:fs/promises'
 import type { Cookie } from 'playwright'
+
+import fs from 'node:fs/promises'
 
 /**
  * Delay execution for a specified time

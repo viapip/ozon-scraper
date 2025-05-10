@@ -1,5 +1,6 @@
-import { join } from 'node:path'
 import { Level } from 'level'
+import { join } from 'node:path'
+
 import { config } from '../../config/index'
 
 interface StorageOptions {
