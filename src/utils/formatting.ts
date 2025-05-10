@@ -2,7 +2,7 @@
  * Format a price as a string with currency symbol
  */
 export function formatPrice(price: number): string {
-  return `${price.toLocaleString('ru-RU')} �`
+  return `${price.toLocaleString('ru-RU')} ₽`
 }
 
 /**

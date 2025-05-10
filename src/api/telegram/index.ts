@@ -67,12 +67,7 @@ export class TelegramService {
         return this.commandHandler.handleReport(ctx)
       })
 
-      // Inject the sendMessage method for the command handler
-      Object.defineProperty(this.commandHandler, 'sendMessage', {
-        value: async (chatId: string, text: string) => {
-          return this.sendTelegramMessage(chatId, text)
-        },
-      })
+      // Removed method injection - now sendProductAnalytics uses ctx parameter
 
       // Start the bot
       logger.info('Starting Telegram bot')

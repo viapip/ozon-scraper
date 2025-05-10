@@ -23,7 +23,6 @@ export interface CommandHandlerDependencies {
 export class TelegramCommandHandler {
   private dependencies: CommandHandlerDependencies
   private formatter: TelegramFormatter
-
   constructor(dependencies: CommandHandlerDependencies) {
     this.dependencies = dependencies
     this.formatter = new TelegramFormatter()
@@ -44,7 +43,7 @@ export class TelegramCommandHandler {
     }
     catch (error) {
       logger.error('Failed to check if user exists:', error)
-      await ctx.reply('User not found')
+      await ctx.reply('Пользователь не найден')
 
       return false
     }
@@ -76,7 +75,7 @@ export class TelegramCommandHandler {
     }
 
     const chatId = ctx.chat.id
-    await ctx.reply(`0H B5:CI89 ID: ${chatId}`)
+    await ctx.reply(`Ваш текущий ID: ${chatId}`)
   }
 
   /**
@@ -88,7 +87,7 @@ export class TelegramCommandHandler {
     }
 
     if (!await this.canActivate(ctx)) {
-      await ctx.reply('0H 0::0C=B 5I5 =5 0:B828@>20=')
+      await ctx.reply('Ваш аккаунт еще не активирован')
 
       return
     }
@@ -97,12 +96,12 @@ export class TelegramCommandHandler {
     const products = await this.dependencies.getProducts(chatId)
 
     if (products.length === 0) {
-      await ctx.reply('">20@K =5 =0945=K')
+      await ctx.reply('Товары не найдены')
 
       return
     }
 
-    await this.sendProductAnalytics(chatId, products)
+    await this.sendProductAnalytics(ctx, chatId, products)
   }
 
   /**
@@ -119,7 +118,7 @@ export class TelegramCommandHandler {
 
     const [, url] = ctx.message.text.split(' ')
     if (!validateUrl(url)) {
-      await ctx.reply('525@=K9 D>@<0B AAK;:8. @8<5@: https://ozon.ru/t/QweRtY', {
+      await ctx.reply('Неверный формат ссылки. Пример: https://ozon.ru/t/QweRtY', {
         link_preview_options: {
           is_disabled: true,
         },
@@ -131,11 +130,11 @@ export class TelegramCommandHandler {
     const chatId = ctx.chat.id.toString()
     try {
       const listId = await this.dependencies.setFavoriteList(chatId, url)
-      await ctx.reply(`!?8A>: 871@0==>3> 4>102;5=: ${listId} \n\n;O ?@>25@:8: https://www.ozon.ru/my/favorites/shared?list=${listId}`)
+      await ctx.reply(`Список избранного добавлен: ${listId} \n\nДля проверки: https://www.ozon.ru/my/favorites/shared?list=${listId}`)
     }
     catch (error) {
       logger.error(`Failed to add favorite list for user ${chatId}:`, error)
-      await ctx.reply('5 C40;>AL 4>1028BL A?8A>: 871@0==>3>. >60;C9AB0, ?@>25@LB5 AAK;:C 8 ?>?@>1C9B5 A=>20.')
+      await ctx.reply('Не удалось добавить список избранного. Пожалуйста, проверьте ссылку и попробуйте снова.')
     }
   }
 
@@ -148,21 +147,21 @@ export class TelegramCommandHandler {
     }
 
     if (!await this.canActivate(ctx)) {
-      await ctx.reply('L # 20A =5B ?@02 4;O 0:B820F88 ?>;L7>20B5;59')
+      await ctx.reply('У вас нет прав для активации пользователей')
 
       return
     }
 
     const [, userId] = ctx.message.text.split(' ')
     if (!userId) {
-      await ctx.reply('� #:068B5 ID ?>;L7>20B5;O.\n@8<5@: /activate 123456789')
+      await ctx.reply('Укажите ID пользователя.\nПример: /activate 123456789')
 
       return
     }
 
     const user = await this.dependencies.getUser(userId)
     if (!user) {
-      await ctx.reply('L >;L7>20B5;L =5 =0945=. @>25@LB5 ID 8 ?>?@>1C9B5 A=>20')
+      await ctx.reply('Пользователь не найден. Проверьте ID и попробуйте снова')
 
       return
     }
@@ -177,11 +176,11 @@ export class TelegramCommandHandler {
       })
 
       // Send confirmation to activating user
-      await ctx.reply(` >B>2>! >;L7>20B5;L ${userId} CA?5H=> 0:B828@>20=`)
+      await ctx.reply(`Готово! Пользователь ${userId} успешно активирован`)
     }
     catch (error) {
       logger.error(`Failed to activate user ${userId}:`, error)
-      await ctx.reply('L 5 C40;>AL 0:B828@>20BL ?>;L7>20B5;O. >?@>1C9B5 ?>765')
+      await ctx.reply('Не удалось активировать пользователя. Попробуйте позже')
     }
   }
 
@@ -194,13 +193,13 @@ export class TelegramCommandHandler {
     }
 
     if (!await this.canActivate(ctx)) {
-      await ctx.reply('# 20A =5B ?@02 4;O >AB0=>2:8 >BA;56820=8O')
+      await ctx.reply('У вас нет прав для остановки отслеживания')
 
       return
     }
 
     await this.dependencies.clearUserProducts(ctx.chat.id.toString())
-    await ctx.reply('=� BA;56820=85 >AB0=>2;5=>')
+    await ctx.reply('Отслеживание остановлено')
   }
 
   /**
@@ -219,7 +218,7 @@ export class TelegramCommandHandler {
   /**
    * Send product analytics to a user
    */
-  async sendProductAnalytics(chatId: string, analytics: ProductAnalytics[], batchSize = 10): Promise<void> {
+  async sendProductAnalytics(ctx: Context, chatId: string, analytics: ProductAnalytics[], batchSize = 10): Promise<void> {
     try {
       for (let i = 0; i < analytics.length; i += batchSize) {
         const batch = analytics.slice(i, i + batchSize)
@@ -228,18 +227,14 @@ export class TelegramCommandHandler {
         })
         const messageText = this.formatter.formatMessage(formattedMessages, i)
 
-        await this.sendMessage(chatId, messageText)
+        await ctx.telegram.sendMessage(chatId, messageText, {
+          link_preview_options: { is_disabled: true },
+          parse_mode: 'HTML',
+        })
       }
     }
     catch (error) {
       logger.error(`Failed to send product analytics to ${chatId}:`, error)
     }
-  }
-
-  /**
-   * Send a message to a user
-   */
-  private async sendMessage(chatId: string, text: string): Promise<void> {
-    // This method will be called by the bot instance
   }
 }
