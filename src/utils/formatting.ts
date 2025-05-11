@@ -26,17 +26,6 @@ export function formatTimestamp(timestamp: number): string {
 /**
  * Validate a URL format
  */
-export function validateUrl(url?: string): boolean {
-  if (!url) {
-    return false
-  }
-
-  try {
-    const parsed = new URL(url)
-
-    return parsed.hostname.includes('ozon.ru')
-  }
-  catch {
-    return false
-  }
+export function validateUrl(url: string): boolean {
+  return (/(?:https?:\/\/)?(?:www\.)?ozon\.ru\/t\/.+/).test(url)
 }

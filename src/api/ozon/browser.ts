@@ -50,7 +50,7 @@ export class OzonBrowser {
   async init(): Promise<void> {
     this.browser = await chromium.launch({
       args: BROWSER_ARGS,
-      headless: false,
+      // headless: false,
     })
 
     this.context = await this.browser.newContext({
