@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { chromium } from 'playwright'
 
 import { config } from '../../config/index'
-import { delay, getRandomDelay, saveCookiesToFile } from '../../utils/browser-helpers'
+import { delay, getRandomDelay, parseCookieString, saveCookiesToFile } from '../../utils/browser-helpers'
 import { createLogger } from '../../utils/logger'
 
 const logger = createLogger('OzonBrowser')
@@ -49,8 +49,8 @@ export class OzonBrowser {
    */
   async init(): Promise<void> {
     this.browser = await chromium.launch({
-      // headless: false,
       args: BROWSER_ARGS,
+      headless: false,
     })
 
     this.context = await this.browser.newContext({
@@ -226,7 +226,7 @@ export class OzonBrowser {
    */
   private async loadCookies(context: BrowserContext, cookiesString: string): Promise<void> {
     try {
-      const cookies = JSON.parse(cookiesString)
+      const cookies = parseCookieString(cookiesString)
       const validCookies = cookies.map((cookie: any) => {
         return {
           ...cookie,

@@ -8,7 +8,7 @@ import { AnalyticsService } from './domain/analytics/index'
 import { ProductService } from './domain/products/index'
 import { UserService } from './domain/users/index'
 import { SchedulerService } from './infrastructure/scheduler/index'
-import { readCookiesFromFile } from './utils/helpers'
+import { readCookiesFromFile } from './utils/browser-helpers'
 import { createLogger } from './utils/logger'
 import { ReportService } from './utils/report'
 

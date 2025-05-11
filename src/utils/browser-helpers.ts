@@ -1,7 +1,17 @@
-import type { Cookie } from 'playwright'
-
 import fs from 'node:fs/promises'
+import path from 'node:path'
+import process from 'node:process'
 
+interface CookieParams {
+  domain?: string
+  expires?: number
+  httpOnly?: boolean
+  name: string
+  path?: string
+  sameSite?: 'Lax' | 'None' | 'Strict'
+  secure?: boolean
+  value: string
+}
 /**
  * Delay execution for a specified time
  */
@@ -21,25 +31,85 @@ export function getRandomDelay(min: number, max: number): number {
 /**
  * Parse cookie string to Cookie objects
  */
-export function parseCookieString(cookieString: string): Cookie[] {
-  try {
-    return JSON.parse(cookieString)
-  }
-  catch (error) {
-    console.error('Failed to parse cookies:', error)
+export function parseCookieString(cookieString: string): CookieParams[] {
+  return cookieString
+    .split('\n')
+    .filter((line) => {
+      return line.trim()
+    })
+    .map((line) => {
+      const parts = line.split(';')
+        .map((part) => {
+          return part.trim()
+        })
+      const [nameValue, ...attributes] = parts
+      const [name, value] = nameValue.split('=')
 
-    return []
-  }
+      const cookie: CookieParams = {
+        domain: '',
+        name,
+        path: '/',
+        sameSite: 'None',
+        secure: false,
+        value: value || '',
+      }
+
+      for (const attr of attributes) {
+        const [key, val] = attr.split('=')
+          .map((s) => {
+            return s.toLowerCase()
+              .trim()
+          })
+        if (key === 'domain') {
+          cookie.domain = val
+        }
+        if (key === 'path') {
+          cookie.path = val
+        }
+        if (key === 'secure') {
+          cookie.secure = true
+        }
+        if (key === 'samesite') {
+          cookie.sameSite = val as CookieParams['sameSite']
+        }
+      }
+
+      return cookie
+    })
 }
 
 /**
  * Save cookies to a file
  */
-export async function saveCookiesToFile(filePath: string, cookies: Cookie[]): Promise<void> {
+export async function saveCookiesToFile(path: string, cookies: any[]): Promise<void> {
+  const cookieString = cookies
+    .map((cookie) => {
+      const { domain, name, path: cookiePath, sameSite, secure, value } = cookie
+      const parts = [
+        `${name}=${value}`,
+        domain && `domain=${domain}`,
+        cookiePath && `path=${cookiePath}`,
+        secure && 'secure',
+        sameSite && `samesite=${sameSite}`,
+      ].filter(Boolean)
+
+      return parts.join('; ')
+    })
+    .join('\n')
+
+  await fs.writeFile(path, cookieString, 'utf8')
+}
+
+/**
+ * Read cookies from a file
+ */
+export async function readCookiesFromFile(filePath: string): Promise<string> {
   try {
-    await fs.writeFile(filePath, JSON.stringify(cookies, null, 2), 'utf8')
+    const fullPath = path.resolve(process.cwd(), filePath)
+
+    return await fs.readFile(fullPath, 'utf8')
   }
   catch (error) {
-    console.error('Failed to save cookies to file:', error)
+    throw new Error(`Ошибка чтения файла cookies: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
