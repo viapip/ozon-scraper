@@ -67,7 +67,7 @@ export class OzonService {
       await this.browser.handleAccessRestriction(page)
 
       logger.info('Waiting for main content to load...')
-      await page.waitForSelector('[data-widget="searchResultsV2"]', {
+      await page.waitForSelector('[data-widget="paginator"]', {
         state: 'visible',
         timeout: 30000,
       })

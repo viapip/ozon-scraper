@@ -34,9 +34,9 @@ export class OzonParser {
   async extractProducts(page: Page): Promise<Product[]> {
     logger.info('Extracting products from page')
 
-    return await page.$$eval('.widget-search-result-container .tile-root', (elements) => {
+    return await page.$$eval('div[data-widget="tileGridDesktop"] .tile-root', (elements) => {
       return elements.map((item) => {
-        // Find all product links and use the last one (most specific)
+      // Find all product links and use the last one (most specific)
         const productLinks = Array.from(item.querySelectorAll('a[href*="/product/"]'))
         const mainProductLink = productLinks[productLinks.length - 1] as HTMLAnchorElement
 
@@ -51,17 +51,17 @@ export class OzonParser {
         const priceElements = allTextElements.filter((el) => {
           const text = el.textContent?.trim() || ''
 
-          // Match prices in rubles (e.g., 1 000 � or 500�)
-          return (/^\d[\d\s]*�$/).test(text)
+          // Match prices in rubles (e.g., 1 000 ₽ or 500₽)
+          return (/^\d[\d\s]*₽$/).test(text)
         })
 
         // Parse price, handling potential formatting
-        const priceText = priceElements[0]?.textContent || '0 �'
+        const priceText = priceElements[0]?.textContent || '0 ₽'
         const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
 
         // Determine stock status (not in stock if price is 0 and "Similar" text exists)
         let inStock = true
-        if (price === 0 && item.textContent?.includes('>E>685')) {
+        if (price === 0 && item.textContent?.includes('Похожие')) {
           inStock = false
         }
 
