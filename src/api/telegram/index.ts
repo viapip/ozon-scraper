@@ -45,6 +45,12 @@ export class TelegramService {
     try {
       logger.info('Registering Telegram bot commands')
 
+      // Create activation middleware - allows /start and /getid without activation
+      const activationMiddleware = this.commandHandler.createActivationCheckMiddleware(['start', 'getid'])
+
+      // Apply middleware to all commands
+      this.bot.use(activationMiddleware)
+
       // Set up command handlers
       this.bot.command('start', (ctx) => {
         return this.commandHandler.handleStart(ctx)

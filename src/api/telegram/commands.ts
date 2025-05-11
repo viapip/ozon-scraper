@@ -1,4 +1,4 @@
-import type { Context } from 'telegraf'
+import type { Context, MiddlewareFn } from 'telegraf'
 
 import type { ProductAnalytics, User } from '../../types'
 
@@ -30,23 +30,60 @@ export class TelegramCommandHandler {
   }
 
   /**
-   * Check if a user can activate others (is activated themselves)
+   * Check if a user is activated
+   * @param ctx - The Telegraf context
+   * @param showMessage - Whether to show an error message if not activated
    */
-  async canActivate(ctx: Context): Promise<boolean> {
+  async isUserActivated(ctx: Context, showMessage = true): Promise<boolean> {
     try {
       if (!ctx.chat) {
         throw new Error('Chat not found')
       }
 
       const user = await this.dependencies.getUser(ctx.chat.id.toString())
+      const isActivated = Boolean(user) && Boolean(user?.isActive)
 
-      return Boolean(user) && Boolean(user?.isActive)
+      if (!isActivated && showMessage) {
+        await ctx.reply('Ваш аккаунт еще не активирован')
+      }
+
+      return isActivated
     }
     catch (error) {
       logger.error('Failed to check if user exists:', error)
-      await ctx.reply('Пользователь не найден')
+      if (showMessage) {
+        await ctx.reply('Пользователь не найден')
+      }
 
       return false
+    }
+  }
+
+  /**
+   * Creates a middleware that checks if a user is activated
+   * @param skipCommands - Array of commands to skip activation check for (e.g., ['start', 'getid'])
+   */
+  createActivationCheckMiddleware(skipCommands: string[] = ['start', 'getid']): MiddlewareFn<Context> {
+    return async (ctx, next) => {
+      // Skip activation check for specified commands
+      if (ctx.message && 'text' in ctx.message) {
+        const text = ctx.message.text || ''
+
+        // Check if this is a command that should skip the activation check
+        if (text.startsWith('/')) {
+          const command = text.split(' ')[0].substring(1) // Remove leading slash and get command name
+          if (skipCommands.includes(command)) {
+            return next()
+          }
+        }
+      }
+
+      // For all other commands, check if user is activated
+      if (await this.isUserActivated(ctx)) {
+        return next()
+      }
+
+      // If we get here, the user is not activated and we've already shown a message
     }
   }
 
@@ -87,12 +124,6 @@ export class TelegramCommandHandler {
       return
     }
 
-    if (!await this.canActivate(ctx)) {
-      await ctx.reply('Ваш аккаунт еще не активирован')
-
-      return
-    }
-
     const chatId = ctx.chat.id.toString()
     const products = await this.dependencies.getProducts(chatId)
 
@@ -110,10 +141,6 @@ export class TelegramCommandHandler {
    */
   async handleAddList(ctx: Context): Promise<void> {
     if (!ctx.chat || !ctx.message || !('text' in ctx.message)) {
-      return
-    }
-
-    if (!await this.canActivate(ctx)) {
       return
     }
 
@@ -144,12 +171,6 @@ export class TelegramCommandHandler {
    */
   async handleActivate(ctx: Context): Promise<void> {
     if (!ctx.chat || !ctx.message || !('text' in ctx.message)) {
-      return
-    }
-
-    if (!await this.canActivate(ctx)) {
-      await ctx.reply('У вас нет прав для активации пользователей')
-
       return
     }
 
@@ -190,12 +211,6 @@ export class TelegramCommandHandler {
    */
   async handleStop(ctx: Context): Promise<void> {
     if (!ctx.chat) {
-      return
-    }
-
-    if (!await this.canActivate(ctx)) {
-      await ctx.reply('У вас нет прав для остановки отслеживания')
-
       return
     }
 

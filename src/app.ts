@@ -79,7 +79,7 @@ export class App {
 
       getReport: (chatId: string) => {
         if (chatId !== config.telegram.adminChatId) {
-          return '� -B0 :><0=40 4>ABC?=0 B>;L:> 4;O 04<8=8AB@0B>@0'
+          return 'Эта команда доступна только для администратора'
         }
 
         return this.reportService.getFormattedReport()
