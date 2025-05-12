@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.2
+
+[compare changes](https://undefined/undefined/compare/v0.0.1...v0.0.2)
+
+### 💅 Refactors
+
+- **docker-build.yml): dynamically set image name based on package.json name fix(package.json:** Rename package from ozon-scraper to ozon-tracker (ffe7ea1)
+
+### ❤️ Contributors
+
+- Aleksandr <starcev.sash@gmail.com>
+
 ## v0.0.1
 
 
