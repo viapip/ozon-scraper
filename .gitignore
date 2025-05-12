@@ -31,4 +31,4 @@ db/
 reports/*
 test-product.*
 
-**/.claude/settings.local.json
+**/.claude/*

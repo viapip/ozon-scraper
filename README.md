@@ -1,55 +1,55 @@
-# Ozon Scraper
+# Ozon Tracker
 
-A tool for monitoring product prices and availability on Ozon.ru with Telegram notifications.
+A robust TypeScript application for monitoring product prices and availability on Ozon.ru, featuring Telegram notifications for price drops and availability changes.
 
 ## Features
 
-- 🔍 Track product price changes and availability
-- 📊 Historical price analytics
-- 🤖 Telegram bot interface for easy management
+- 🔍 Automated tracking of product prices and availability
+- 📊 Historical price analytics and trends
+- 🤖 Intuitive Telegram bot interface
 - 👥 Multi-user support with individual tracking lists
-- 📋 Application performance reporting
-- 🔄 Scheduled automatic checks
+- 📈 Performance metrics and reporting
+- 🛡️ Anti-detection mechanisms for reliable data collection
+- 🔄 Configurable scheduled checks
 
 ## Architecture
 
-The application is built on a modular architecture:
+The application follows a clean, modular architecture with clear separation of concerns:
 
 ```
 src/
-├── api/                       # API interfaces for external services
-│   ├── ozon/                  # Ozon web scraping module
-│   └── telegram/              # Telegram messaging module
-├── config/                    # Application configuration
-├── domain/                    # Business logic
-│   ├── products/              # Products module
-│   ├── analytics/             # Analytics module
-│   └── users/                 # Users module
-├── infrastructure/            # Infrastructure code
-│   ├── scheduler/             # Scheduler module
-│   ├── storage/               # Storage module
-│   └── logger/                # Logging module
-├── utils/                     # Utilities
-├── types/                     # Common types
-├── app.ts                     # Application initialization
-└── index.ts                   # Entry point
+├── api/                   # External service integrations
+│   ├── ozon/              # Ozon.ru scraping implementation
+│   └── telegram/          # Telegram bot implementation
+├── config/                # Application configuration
+├── domain/                # Core business logic
+│   ├── products/          # Product management
+│   ├── analytics/         # Price analytics
+│   └── users/             # User management
+├── infrastructure/        # Technical infrastructure
+│   ├── scheduler/         # Task scheduling
+│   └── storage/           # Data persistence
+├── utils/                 # Shared utilities
+├── types/                 # TypeScript type definitions
+├── app.ts                 # Application initialization
+└── index.ts              # Entry point
 ```
 
 ## Requirements
 
-- Node.js (v18 or higher)
+- Node.js (v18+)
 - Yarn package manager
-- Telegram bot token
-- Telegram admin chat ID
-- Ozon.ru cookies
+- Telegram bot token (obtain from [@BotFather](https://t.me/botfather))
+- Telegram user ID for admin access
+- Ozon.ru cookies (for authentication)
 
 ## Installation
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/ozon-scraper.git
-cd ozon-scraper
+git clone https://github.com/yourusername/ozon-tracker.git
+cd ozon-tracker
 ```
 
 2. Install dependencies:
@@ -58,62 +58,99 @@ cd ozon-scraper
 yarn install
 ```
 
-3. Create a `.env` file in the root directory with the following variables:
+3. Create a `.env` file with the following configuration:
 
 ```env
-# Required parameters
+# Required
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_ADMIN_CHAT_ID=your_telegram_admin_chat_id
+TELEGRAM_ADMIN_CHAT_ID=your_telegram_chat_id
 
-# Optional parameters
+# Optional (with defaults)
 SCHEDULER_CHECK_INTERVAL=30  # check interval in minutes
 LOG_LEVEL=info               # logging level (debug, info, warn, error)
-DATABASE_PATH=./db           # database path
+DATABASE_PATH=./db           # LevelDB database location
+OZON_HEADLESS=true           # run browser in headless mode
 ```
 
-4. Create a `.cookies` file in the root directory with your Ozon.ru cookies
+4. Create a `.cookies` file containing your Ozon.ru cookies in standard format
+   - Use the provided `.cookies.example` file as a template: copy it to `.cookies` and replace the example cookies with your own
+
+### Cookie Management Best Practices
+
+- **Use Private/Incognito Mode**: Log in to Ozon.ru using private/incognito browsing mode to prevent session conflicts between the bot and your regular browsing sessions. This prevents Ozon from invalidating the bot's cookies when you log in from another device.
+- **Extract Cookies Carefully**: After logging in, extract the cookies from your browser's developer tools and save them to the `.cookies` file.
+- **Regular Updates**: Periodically update the cookies file if you notice tracking issues or authentication problems.
+
+### Why Cookies Are Required
+
+1. **Personalized Pricing**: Ozon.ru may show different prices to different users or to non-authenticated visitors. Using your account's cookies ensures the bot sees the same prices you would see.
+2. **Wishlists Access**: The application tracks products through Ozon's wishlists feature, which requires authentication.
+3. **Anti-Bot Protection**: Ozon implements anti-scraping measures that are more permissive with authenticated sessions.
 
 ## Running the Application
 
-1. Start the application:
+### Production
 
 ```bash
-yarn start
+yarn build  # Build the application
+yarn start  # Start the application
 ```
 
-2. For development:
+### Development
 
 ```bash
-yarn dev
+yarn dev    # Run with automatic restarting
+```
+
+### Docker
+
+```bash
+docker-compose up -d  # Run with Docker Compose
 ```
 
 ## Telegram Bot Commands
 
-- `/start` - Initialize the bot and get your ID
-- `/getid` - Get your chat ID
+- `/start` - Initialize the bot and get basic information
+- `/getid` - Get your Telegram chat ID
 - `/activate <chat_id>` - Activate a user (admin only)
-- `/addlist <ozon_list_url>` - Add a wishlist for tracking
-- `/getall` - Show all tracked products
-- `/stop` - Stop tracking products
-- `/report` - Get application statistics (admin only)
+- `/addlist <ozon_list_url>` - Add an Ozon wishlist for tracking
+- `/getall` - Show all currently tracked products
+- `/stop` - Stop tracking and deactivate your account
+- `/report` - Get application performance statistics (admin only)
 
 ## How It Works
 
-1. User adds a public Ozon wishlist URL
-2. The system periodically checks for price and availability changes
-3. When changes are detected (price drops, availability changes), notifications are sent
-4. All price history is stored for later analysis
+1. **Authentication**: The application uses provided cookies to authenticate with Ozon.ru
+2. **Data Collection**: At scheduled intervals, the application scrapes product information from user wishlists
+3. **Analysis**: Price and availability changes are detected by comparing with historical data
+4. **Notification**: When significant changes are detected (price drops or availability changes), users receive Telegram notifications
+5. **Storage**: All price history is stored in LevelDB for efficient retrieval and analysis
 
-## Technology Stack
+## Technical Implementation
 
-- TypeScript for type safety and code reliability
-- LevelDB for data storage
-- Playwright for browser automation
-- Telegraf for Telegram API integration
+- **TypeScript** for type safety and maintainability
+- **Playwright** for reliable browser automation with anti-detection techniques
+- **LevelDB** for efficient, persistent data storage
+- **Telegraf** for Telegram API integration
+- **Node.js** scheduler for reliable task execution
 
-## Key Features
+## Best Practices
 
-- Anti-detection techniques to bypass Ozon protections
-- Modular architecture for easy extension
-- Efficient price history storage
-- Support for multiple users with different product lists
+- **Error Handling**: Comprehensive error catching and logging
+- **Modular Design**: Clear separation of concerns with domain-driven design
+- **Anti-Detection**: Advanced browser fingerprint spoofing to prevent blocking
+- **Resource Management**: Proper cleanup of browser resources
+- **Performance Optimization**: Batched notifications and efficient data storage
+- **Configurability**: Environment-based configuration for flexible deployment
+
+## Development Guidelines
+
+- Follow the existing code style and architecture
+- Ensure proper error handling in all async operations
+- Use the logger for all significant events
+- Keep dependencies updated to maintain security
+- Add tests for new functionality
+
+## License
+
+MIT
