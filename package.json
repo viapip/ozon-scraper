@@ -17,11 +17,16 @@
   "keywords": [],
   "sideEffects": false,
   "exports": {
-    ".": {
-      "import": "./dist/index.mjs"
+    "import": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "require": {
+      "types": "./dist/index.d.cts",
+      "default": "./dist/index.cjs"
     }
   },
-  "main": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "typesVersions": {
@@ -39,13 +44,16 @@
     "build": "pkgroll",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/index.ts",
-    "start": "node dist/index.mjs",
+    "start": "node dist/index.cjs",
     "release": "yarn publish",
     "lint": "eslint --ext=ts,js,vue .",
     "clean": "yarn exec rm -rf dist"
   },
   "dependencies": {
-    "level": "^8.0.1"
+    "consola": "^3.4.2",
+    "dotenv": "^16.5.0",
+    "level": "^8.0.1",
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "@types/levelup": "^5.1.5",
@@ -54,14 +62,11 @@
     "@typescript-eslint/parser": "^8.32.0",
     "@viapip/eslint-config": "^0.1.1",
     "@yarnpkg/doctor": "^4.0.3",
-    "consola": "^3.4.2",
     "date-fns": "^4.1.0",
-    "dotenv": "^16.5.0",
     "eslint": "^9.26.0",
     "jsonc-eslint-parser": "^2.4.0",
     "lint-staged": "^15.5.2",
     "pkgroll": "^2.12.2",
-    "playwright": "^1.52.0",
     "puppeteer": "^22.15.0",
     "simple-git-hooks": "^2.13.0",
     "telegraf": "^4.16.3",

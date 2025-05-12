@@ -280,7 +280,7 @@ export class OzonBrowser {
       }
 
       // Check for access restriction
-      if ((await page.content()).includes('>ABC? >3@0=8G5=')) {
+      if ((await page.content()).includes('Доступ ограничен')) {
         logger.info('Access restricted, exiting...')
         throw new Error('Access restricted')
       }

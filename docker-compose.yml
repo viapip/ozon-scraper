@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: viapip/ozon-bot:latest
+    image: viapip/ozon-tracker:0.0.1
     container_name: ozon-tracker
     restart: unless-stopped
     env_file:
