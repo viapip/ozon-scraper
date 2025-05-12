@@ -6660,9 +6660,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ozon-scraper@workspace:.":
+"ozon-tracker@workspace:.":
   version: 0.0.0-use.local
-  resolution: "ozon-scraper@workspace:."
+  resolution: "ozon-tracker@workspace:."
   dependencies:
     "@types/levelup": "npm:^5.1.5"
     "@types/node": "npm:^22.15.17"

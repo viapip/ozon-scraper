@@ -5,10 +5,6 @@ on:
     tags:
     - 'v*'
 
-env:
-  REGISTRY: docker.io
-  IMAGE_NAME: viapip/ozon-tracker
-
 jobs:
   build-and-push:
     name: Build and Push Docker Image
@@ -22,6 +18,19 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
+    - name: Read package.json
+      id: package
+      run: |
+        PACKAGE_NAME=$(node -p "require('./package.json').name")
+        echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+    - name: Set environment variables
+      run: |
+        # Extract GitHub repository owner (username or organization)
+        REPO_OWNER="${GITHUB_REPOSITORY_OWNER}"
+        echo "REGISTRY=docker.io" >> $GITHUB_ENV
+        echo "IMAGE_NAME=${REPO_OWNER}/${{ steps.package.outputs.PACKAGE_NAME }}" >> $GITHUB_ENV
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
