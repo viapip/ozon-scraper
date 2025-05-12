@@ -3,6 +3,7 @@
  */
 
 export interface OzonConfig {
+  headless: boolean
   userAgent: string
 }
 

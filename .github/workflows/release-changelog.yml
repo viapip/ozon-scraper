@@ -1,0 +1,73 @@
+name: Create Release with Changelog
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      run: |
+        corepack enable
+        yarn install --immutable
+
+    - name: Generate Changelog
+      id: generate_changelog
+      run: |
+        # Generate temporary changelog for the current release
+        yarn changelogen --from $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "") --to HEAD --output CHANGELOG.md
+
+        # Output changelog for verification
+        cat CHANGELOG.md
+
+    - name: Update CHANGELOG.md in repository
+      run: |
+        if [ ! -f CHANGELOG.md ]; then
+          touch CHANGELOG.md
+        fi
+
+        # Temporarily save the current CHANGELOG
+        cp CHANGELOG.md CHANGELOG.md.new
+
+        # Get the content of the existing CHANGELOG, if it exists
+        if [ -s CHANGELOG.md ]; then
+          tail -n +3 CHANGELOG.md > CHANGELOG.md.old
+        else
+          touch CHANGELOG.md.old
+        fi
+
+        # Create new CHANGELOG
+        head -n 2 CHANGELOG.md.new > CHANGELOG.md
+        cat CHANGELOG.md.old >> CHANGELOG.md
+        rm CHANGELOG.md.new CHANGELOG.md.old
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ steps.get_version.outputs.VERSION }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        body_path: ${{ github.workspace }}/CHANGELOG.md

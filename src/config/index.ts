@@ -17,6 +17,7 @@ export function loadConfig(): AppConfig {
     },
     log: getLogConfig(),
     ozon: {
+      headless: getEnvAsBoolean('OZON_BROWSER_HEADLESS', true),
       userAgent: getEnv('OZON_USER_AGENT', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'),
     },
     scheduler: {

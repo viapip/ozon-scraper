@@ -1,0 +1,35 @@
+{
+  "types": {
+    "feat": { "title": "🚀 New Features" },
+    "fix": { "title": "🐛 Bug Fixes" },
+    "docs": { "title": "📚 Documentation" },
+    "style": { "title": "💅 Style" },
+    "refactor": { "title": "⚙️ Improvements" },
+    "perf": { "title": "⚡ Performance" },
+    "test": { "title": "✅ Tests" },
+    "build": { "title": "📦 Build" },
+    "ci": { "title": "👷 CI" },
+    "chore": { "title": "🔧 Other" }
+  },
+  "titles": {
+    "breakingChanges": "⚠️ Breaking Changes"
+  },
+  "contributors": true,
+  "capitalize": true,
+  "github": {
+    "repo": "{repo}",
+    "release": true
+  },
+  "includeMessages": [
+    "feat",
+    "fix",
+    "docs",
+    "style",
+    "refactor",
+    "perf",
+    "test",
+    "build",
+    "ci",
+    "chore"
+  ]
+}
