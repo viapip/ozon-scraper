@@ -13,7 +13,6 @@
   "typescript.tsdk": ".yarn/sdks/typescript/lib",
   "eslint.format.enable": true,
   "eslint.lintTask.enable": true,
-  "eslint.packageManager": "yarn",
 
   "eslint.useFlatConfig": true,
   "eslint.validate": [

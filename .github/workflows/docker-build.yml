@@ -3,7 +3,7 @@ name: Build and Publish Docker Image
 on:
   push:
     tags:
-    - 'v*'
+      - "v*"
 
 jobs:
   build-and-push:
@@ -14,57 +14,57 @@ jobs:
       contents: read
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: Read package.json
-      id: package
-      run: |
-        PACKAGE_NAME=$(node -p "require('./package.json').name")
-        echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+      - name: Read package.json
+        id: package
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_OUTPUT
 
-    - name: Set environment variables
-      run: |
-        # Extract GitHub repository owner (username or organization)
-        REPO_OWNER="${GITHUB_REPOSITORY_OWNER}"
-        echo "REGISTRY=docker.io" >> $GITHUB_ENV
-        echo "IMAGE_NAME=${REPO_OWNER}/${{ steps.package.outputs.PACKAGE_NAME }}" >> $GITHUB_ENV
+      - name: Set environment variables
+        run: |
+          # Extract GitHub repository owner (username or organization)
+          REPO_OWNER="${GITHUB_REPOSITORY_OWNER}"
+          echo "REGISTRY=docker.io" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${REPO_OWNER}/${{ steps.package.outputs.PACKAGE_NAME }}" >> $GITHUB_ENV
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-    - name: Get version from tag
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-    - name: Extract Docker metadata
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=semver,pattern={{version}}
-          type=raw,value=latest
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
-        build-args: |
-          NODE_ENV=production
-          APP_VERSION=${{ steps.get_version.outputs.VERSION }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            NODE_ENV=production
+            APP_VERSION=${{ steps.get_version.outputs.VERSION }}

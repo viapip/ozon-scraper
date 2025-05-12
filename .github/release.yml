@@ -1,34 +1,34 @@
 changelog:
   exclude:
     labels:
-    - ignore-for-release
+      - ignore-for-release
     authors:
-    - dependabot
+      - dependabot
   categories:
-  - title: 🚀 New Features
-    labels:
-    - feature
-    - enhancement
-    commits:
-    - feat*
-    - feature*
-  - title: 🐛 Bug Fixes
-    labels:
-    - fix
-    - bugfix
-    commits:
-    - fix*
-  - title: ⚙️ Improvements
-    labels:
-    - refactor
-    commits:
-    - refactor*
-    - perf*
-  - title: 📚 Documentation
-    labels:
-    - documentation
-    commits:
-    - docs*
-  - title: 🔧 Other Changes
-    labels:
-    - '*'
+    - title: 🚀 New Features
+      labels:
+        - feature
+        - enhancement
+      commits:
+        - feat*
+        - feature*
+    - title: 🐛 Bug Fixes
+      labels:
+        - fix
+        - bugfix
+      commits:
+        - fix*
+    - title: ⚙️ Improvements
+      labels:
+        - refactor
+      commits:
+        - refactor*
+        - perf*
+    - title: 📚 Documentation
+      labels:
+        - documentation
+      commits:
+        - docs*
+    - title: 🔧 Other Changes
+      labels:
+        - "*"

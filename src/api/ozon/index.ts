@@ -91,7 +91,6 @@ export class OzonService {
       logger.error('Error loading page:', error)
 
       try {
-        const _page = this.browser.getPage()
         await this.browser.takeScreenshot('reports/error-screenshot.png')
         await this.browser.savePageHtml('reports/error-page.html')
       }

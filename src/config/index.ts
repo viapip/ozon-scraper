@@ -18,6 +18,12 @@ export function loadConfig(): AppConfig {
     log: getLogConfig(),
     ozon: {
       headless: getEnvAsBoolean('OZON_BROWSER_HEADLESS', true),
+      // Optional fixed profile index (if not random)
+      profileIndex: getEnvAsNumber('OZON_PROFILE_INDEX', -1),
+      // Enable profile rotation by default for better anti-bot protection
+      profileRotation: getEnvAsBoolean('OZON_PROFILE_ROTATION', true),
+      // Whether to persist the same profile for the entire session
+      sessionPersistence: getEnvAsBoolean('OZON_SESSION_PERSISTENCE', true),
       userAgent: getEnv('OZON_USER_AGENT', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'),
     },
     scheduler: {

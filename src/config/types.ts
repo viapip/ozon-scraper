@@ -4,6 +4,10 @@
 
 export interface OzonConfig {
   headless: boolean
+  profileIndex?: number
+  // New options for profile rotation
+  profileRotation?: boolean
+  sessionPersistence?: boolean
   userAgent: string
 }
 

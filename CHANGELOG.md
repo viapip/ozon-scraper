@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.3
+
+[compare changes](https://undefined/undefined/compare/v0.0.2...v0.0.3)
+
+### 🏡 Chore
+
+- Update gitignore to ignore all files in .claude directory docs: update README with detailed information about Ozon Tracker build: update docker-compose to use latest image tag (21c9ade)
+
+### ❤️ Contributors
+
+- Aleksandr <starcev.sash@gmail.com>
+
 ## v0.0.2
 
 [compare changes](https://undefined/undefined/compare/v0.0.1...v0.0.2)
