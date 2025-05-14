@@ -16,6 +16,7 @@ export interface CommandHandlerDependencies {
   getUser: (chatId: string) => Promise<null | User>
   setActive: (chatId: string, isActive: boolean) => Promise<void>
   setFavoriteList: (chatId: string, url: string) => Promise<string>
+  setNotificationThreshold: (chatId: string, threshold: number) => Promise<void>
 }
 
 /**
@@ -229,6 +230,34 @@ export class TelegramCommandHandler {
     const chatId = ctx.chat.id.toString()
     const report = this.dependencies.getReport(chatId)
     await ctx.reply(report)
+  }
+
+  /**
+   * Handle the /setthreshold command
+   */
+  async handleSetThreshold(ctx: Context): Promise<void> {
+    if (!ctx.chat || !ctx.message || !('text' in ctx.message)) {
+      return
+    }
+
+    const [, thresholdStr] = ctx.message.text.split(' ')
+    const threshold = Number.parseInt(thresholdStr, 10)
+
+    if (Number.isNaN(threshold) || threshold < 0 || threshold > 100) {
+      await ctx.reply('Пожалуйста, укажите корректное значение от 0 до 100.\nПример: /setthreshold 10')
+
+      return
+    }
+
+    const chatId = ctx.chat.id.toString()
+    try {
+      await this.dependencies.setNotificationThreshold(chatId, threshold)
+      await ctx.reply(`Порог уведомлений установлен на ${threshold}%. Вы будете получать уведомления только при скидке от медианы более ${threshold}%.`)
+    }
+    catch (error) {
+      logger.error(`Failed to set notification threshold for user ${chatId}:`, error)
+      await ctx.reply('Не удалось установить порог уведомлений. Пожалуйста, попробуйте снова позже.')
+    }
   }
 
   /**

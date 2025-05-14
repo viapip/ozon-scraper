@@ -17,6 +17,20 @@ export function formatDate(date: Date): string {
 }
 
 /**
+ * Format a date and time as a string with seconds
+ */
+export function formatDateTimeWithSeconds(date: Date): string {
+  return date.toLocaleString('ru-RU', {
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    month: '2-digit',
+    second: '2-digit',
+    year: 'numeric',
+  })
+}
+
+/**
  * Format a timestamp as a date string
  */
 export function formatTimestamp(timestamp: number): string {

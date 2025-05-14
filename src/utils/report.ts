@@ -1,5 +1,5 @@
 import { createLogger } from '../utils/logger'
-import { formatDate } from './formatting'
+import { formatDateTimeWithSeconds } from './formatting'
 
 const logger = createLogger('ReportService')
 
@@ -82,7 +82,7 @@ export class ReportService {
 🏷️ Products Tracked: ${this.stats.totalProductsTracked}
 💰 Total Price Drops: ${this.stats.totalPriceDrops}
 📦 Availability Changes: ${this.stats.totalAvailabilityChanges}
-🕐 Last Check: ${this.stats.lastCheckTime ? formatDate(this.stats.lastCheckTime) : 'Never'}`
+🕐 Last Check: ${this.stats.lastCheckTime ? formatDateTimeWithSeconds(this.stats.lastCheckTime) : 'Never'}`
   }
 
   /**

@@ -36,10 +36,11 @@ export class TelegramFormatter {
     const { name, price: currentPrice, url } = analytics.current
     const { price: minPrice } = analytics.minPrice
     const { price: maxPrice } = analytics.maxPrice
+    const { price: medianPrice } = analytics.medianPrice
 
-    const trend = this.getPriceTrendSymbol(analytics.priceDiffPercent)
-    const priceChangeFormatted = this.formatPriceChange(analytics.priceDiffPercent)
-    const [productName, ..._args] = name.split(',')
+    const trend = this.getPriceTrendSymbol(analytics.discountFromMedianPercent)
+    const priceChangeFormatted = this.formatPriceChange(analytics.discountFromMedianPercent)
+    const [productName] = name.split(',')
 
     let inStockText = ''
     if (analytics.becameAvailable) {
@@ -52,8 +53,8 @@ export class TelegramFormatter {
     return `
 ${inStockText}<b>${productName}</b>
 💰 <b>${formatPrice(currentPrice)}</b> 
-📊 <code>${trend} ${priceChangeFormatted}</code>
-📉 Min/Max: <code>${formatPrice(minPrice)}/${formatPrice(maxPrice)}</code>
+📊 <code>${trend} ${priceChangeFormatted}</code> от медианы
+📉 Min/Med/Max: <code>${formatPrice(minPrice)}/${formatPrice(medianPrice)}/${formatPrice(maxPrice)}</code>
 <a href="${url}">Открыть в Ozon →</a>
 ${TelegramFormatter.ITEM_SEPARATOR}`
   }
@@ -109,6 +110,7 @@ ${TelegramFormatter.ITEM_SEPARATOR}`
       '➡ */getall* - Показать все отслеживаемые товары',
       '❌ */stop* - Остановить отслеживание всех товаров, для возобновления добавьте список снова',
       'ℹ️ */getid* - Показать ваш ID',
+      '➡️ */setthreshold* - Установить порог скидки для уведомлений (например, /setthreshold 10)',
       '',
       '*Пример добавления списка:*',
       '`/addlist https://ozon.ru/t/QweRtY`',

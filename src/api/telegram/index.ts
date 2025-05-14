@@ -73,6 +73,9 @@ export class TelegramService {
       this.bot.command('report', (ctx) => {
         return this.commandHandler.handleReport(ctx)
       })
+      this.bot.command('setthreshold', (ctx) => {
+        return this.commandHandler.handleSetThreshold(ctx)
+      })
 
       // Removed method injection - now sendProductAnalytics uses ctx parameter
 

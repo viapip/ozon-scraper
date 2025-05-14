@@ -24,9 +24,10 @@ export interface ProductAnalytics {
   becameAvailable: boolean
   becameUnavailable: boolean
   current: Product
+  discountFromMedianPercent: number
   maxPrice: PriceHistory
+  medianPrice: PriceHistory
   minPrice: PriceHistory
-  priceDiffPercent: number
 }
 
 export interface ProductListUrl {
@@ -45,5 +46,6 @@ export interface User {
   favoriteListId?: string
   isActive: boolean
   lastActivityAt: number
+  notificationThreshold?: number
   products: string[]
 }

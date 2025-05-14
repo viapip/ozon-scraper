@@ -121,6 +121,13 @@ export class UserService {
   }
 
   /**
+   * Set a user's notification threshold
+   */
+  async setNotificationThreshold(chatId: string, threshold: number): Promise<null | User> {
+    return this.updateUser(chatId, { notificationThreshold: threshold })
+  }
+
+  /**
    * Delete a user
    */
   async deleteUser(chatId: string): Promise<void> {

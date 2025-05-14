@@ -40,6 +40,7 @@ export class AnalyticsService {
 
       const minPriceItem = this.findExtremePrice(historyItems, 'min')
       const maxPriceItem = this.findExtremePrice(historyItems, 'max')
+      const medianPriceItem = this.calculateMedianPrice(historyItems)
 
       // Get previous state to check for changes
       const prevHistoryItem = historyItems.length > 1 ? historyItems[1] : historyItems[0]
@@ -48,17 +49,20 @@ export class AnalyticsService {
       const becameAvailable = !prevHistoryItem.inStock && product.inStock
       const becameUnavailable = prevHistoryItem.inStock && !product.inStock
 
-      // Fix price change calculation when product was previously unavailable
-      const prevPrice = prevHistoryItem.price === 0 ? product.price : prevHistoryItem.price
-      const priceDiffPercent = product.price && this.calculatePriceChange(product.price, prevPrice)
+      // Calculate discount from median price
+      const discountFromMedianPercent = this.calculateDiscountFromMedian(
+        product.price,
+        medianPriceItem.price,
+      )
 
       return {
         becameAvailable,
         becameUnavailable,
         current: product,
+        discountFromMedianPercent,
         maxPrice: maxPriceItem,
+        medianPrice: medianPriceItem,
         minPrice: minPriceItem,
-        priceDiffPercent,
       }
     }
     catch (error) {
@@ -95,13 +99,13 @@ export class AnalyticsService {
     const unavailableProducts = totalProducts - availableProducts
 
     const priceIncreasedCount = analytics.filter((a) => {
-      return a.priceDiffPercent > 0
+      return a.discountFromMedianPercent > 0
     }).length
     const priceDecreasedCount = analytics.filter((a) => {
-      return a.priceDiffPercent < 0
+      return a.discountFromMedianPercent < 0
     }).length
     const priceUnchangedCount = analytics.filter((a) => {
-      return a.priceDiffPercent === 0
+      return a.discountFromMedianPercent === 0
     }).length
 
     const newlyAvailableCount = analytics.filter((a) => {
@@ -113,13 +117,13 @@ export class AnalyticsService {
 
     // Calculate average price change for available products
     const availableAnalytics = analytics.filter((a) => {
-      return a.current.inStock && a.priceDiffPercent !== 0
+      return a.current.inStock && a.discountFromMedianPercent !== 0
     })
     let averagePriceChange = 0
 
     if (availableAnalytics.length > 0) {
       const totalChange = availableAnalytics.reduce((sum, a) => {
-        return sum + a.priceDiffPercent
+        return sum + a.discountFromMedianPercent
       }, 0)
       averagePriceChange = Math.round(totalChange / availableAnalytics.length)
     }
@@ -156,6 +160,32 @@ export class AnalyticsService {
   }
 
   /**
+   * Calculate median price from history
+   */
+  private calculateMedianPrice(history: PriceHistory[]): PriceHistory {
+    // Filter out unavailable items (price === 0)
+    const availableItems = history.filter((item) => {
+      return item.inStock && item.price > 0
+    })
+
+    if (availableItems.length === 0) {
+      return history[0] // Return first element if no available items
+    }
+
+    // Sort by price
+    const sortedItems = [...availableItems].sort((a, b) => {
+      return a.price - b.price
+    })
+
+    // Get median element
+    const medianIndex = Math.floor(sortedItems.length / 2)
+
+    return sortedItems.length % 2 === 0
+      ? sortedItems[medianIndex - 1]
+      : sortedItems[medianIndex]
+  }
+
+  /**
    * Calculate price change as percentage
    */
   private calculatePriceChange(currentPrice: number, originalPrice: number): number {
@@ -164,5 +194,16 @@ export class AnalyticsService {
     }
 
     return Math.round(((currentPrice - originalPrice) / originalPrice) * 100)
+  }
+
+  /**
+   * Calculate discount from median price as percentage
+   */
+  private calculateDiscountFromMedian(currentPrice: number, medianPrice: number): number {
+    if (medianPrice === 0) {
+      return 0
+    }
+
+    return Math.round(((currentPrice - medianPrice) / medianPrice) * 100)
   }
 }

@@ -103,6 +103,11 @@ export class App {
 
         return listId
       },
+
+      setNotificationThreshold: async (chatId: string, threshold: number) => {
+        logger.info(`Setting notification threshold for user ${chatId} to ${threshold}%`)
+        await this.userService.setNotificationThreshold(chatId, threshold)
+      },
     }
 
     // Initialize Telegram service
@@ -177,8 +182,14 @@ export class App {
 
           // Get analytics and filter for changes
           const analyticsArray = await this.getAnalyticsForProducts(products)
+          const { notificationThreshold } = user
+          const discountThreshold = notificationThreshold ?? 0
+
           const changedProducts = analyticsArray.filter((analytics) => {
-            return analytics.priceDiffPercent < 0
+            // Notify only if discount is greater than threshold (negative number, so use <=)
+            const significantDiscount = analytics.discountFromMedianPercent <= -discountThreshold
+
+            return significantDiscount
               || analytics.becameAvailable
               || analytics.becameUnavailable
           },
@@ -188,7 +199,7 @@ export class App {
 
           // Record statistics
           for (const product of changedProducts) {
-            if (product.priceDiffPercent < 0) {
+            if (product.discountFromMedianPercent < 0) {
               this.reportService.recordPriceDrop()
             }
             if (product.becameAvailable || product.becameUnavailable) {
