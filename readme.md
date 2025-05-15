@@ -151,6 +151,38 @@ docker-compose up -d  # Run with Docker Compose
 - Keep dependencies updated to maintain security
 - Add tests for new functionality
 
+## Testing
+
+The application includes a comprehensive test suite using Vitest. Tests cover the core functionality, including product services, analytics, and utility functions.
+
+### Running Tests
+
+```bash
+# Run all tests
+yarn test
+
+# Run tests in watch mode
+yarn test:watch
+
+# Run tests with coverage report
+yarn test:coverage
+```
+
+### Test Structure
+
+Tests are organized to match the application structure:
+
+```
+tests/
+├── unit/                  # Unit tests
+│   ├── api/               # API integration tests
+│   ├── domain/            # Business logic tests
+│   └── utils/             # Utility function tests
+├── integration/           # Integration tests
+├── mocks/                 # Mock implementations
+└── fixtures/              # Test data fixtures
+```
+
 ## License
 
 MIT
