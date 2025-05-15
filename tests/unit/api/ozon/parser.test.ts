@@ -30,7 +30,7 @@ describe('ozonParser', () => {
     mockPage = {
       $$eval: vi.fn(),
       goto: vi.fn()
-        .mockResolvedValue(),
+        .mockResolvedValue(null),
       url: vi.fn()
         .mockReturnValue(''),
     } as unknown as Page
