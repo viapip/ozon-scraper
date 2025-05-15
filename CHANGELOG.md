@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.0.4
+
+[compare changes](https://undefined/undefined/compare/v0.0.3...v0.0.4)
+
+### 🚀 Enhancements
+
+- **telegram:** Add /setthreshold command to set notification threshold (94b4d23)
+
+### 🩹 Fixes
+
+- **typescript:** Correct path alias configuration for tests (048c2d8)
+
+### 💅 Refactors
+
+- **ozon/parser): improve out-of-stock detection logic feat(analytics/service): add detection for products that were never in stock feat(analytics/service): add detection for products that came back in stock refactor(analytics/service): exclude zero prices from min/max/median calculations feat(telegram/formatter): enhance message formatting with new status indicators feat(telegram/formatter): add special message for products that were never in stock feat(telegram/formatter): add special message for products that came back in stock refactor(formatting): add formatPriceOrStatus utility for conditional price/status display test(ozon/parser): add tests for new out-of-stock detection logic test(analytics/service): add tests for new never-in-stock and came-back-in-stock detection test(analytics/service): add tests for excluding zero prices from calculations test(formatting:** Add tests for formatPriceOrStatus utility (c694684)
+
+### ✅ Tests
+
+- **ozonParser:** Mock goto method to return null to match puppeteer behavior (5d11808)
+
+### ❤️ Contributors
+
+- Aleksandr <starcev.sash@gmail.com>
+
 ## v0.0.3
 
 [compare changes](https://undefined/undefined/compare/v0.0.2...v0.0.3)
