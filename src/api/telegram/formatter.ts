@@ -1,6 +1,6 @@
 import type { ProductAnalytics } from '../../types/index'
 
-import { formatPrice } from '../../utils/formatting'
+import { formatPrice, formatPriceOrStatus } from '../../utils/formatting'
 
 /**
  * Formats messages for Telegram
@@ -42,19 +42,60 @@ export class TelegramFormatter {
     const priceChangeFormatted = this.formatPriceChange(analytics.discountFromMedianPercent)
     const [productName] = name.split(',')
 
-    let inStockText = ''
-    if (analytics.becameAvailable) {
-      inStockText = '📦'
+    // Status indicators
+    let statusIndicator = ''
+    let priceDisplay = ''
+    let trendDisplay = ''
+    let additionalInfo = ''
+
+    const { becameAvailable, becameUnavailable, cameBackInStock, current, wasEverInStock } = analytics
+    // Check if product is in stock
+    if (!current.inStock) {
+      // Product is not in stock
+      statusIndicator = '🚫' // Always show unavailable indicator
+
+      // Use the new formatting function for price display
+      priceDisplay = `<b>${formatPriceOrStatus(currentPrice, false, wasEverInStock)}</b>`
+
+      trendDisplay = '' // Don't show trend for unavailable products
     }
-    else if (analytics.becameUnavailable) {
-      inStockText = '🚫'
+    else {
+      // Product is in stock
+      priceDisplay = `<b>${formatPrice(currentPrice)}</b>`
+      trendDisplay = `<code>${trend} ${priceChangeFormatted}</code> от медианы`
+
+      // Special case for products that came back in stock
+      if (cameBackInStock) {
+        statusIndicator = '🔄' // Product came back in stock
+        additionalInfo = '<i>Товар снова в наличии!</i>'
+      }
+      else if (becameAvailable && !wasEverInStock) {
+        statusIndicator = '🆕' // Product available for the first time
+        additionalInfo = '<i>Товар впервые в наличии!</i>'
+      }
+      else if (becameAvailable) {
+        statusIndicator = '📦' // Recently became available
+      }
     }
 
+    // Handle status change indicators (append to existing indicators)
+    if (becameUnavailable) {
+      statusIndicator += '🚫' // Recently became unavailable
+    }
+    else if (becameAvailable && !statusIndicator.includes('📦')
+      && !statusIndicator.includes('🔄') && !statusIndicator.includes('🆕')) {
+      statusIndicator += '📦' // Recently became available
+    }
+
+    // Only show history statistics if the product was ever in stock
+    const historyStats = wasEverInStock || current.inStock
+      ? `📉 Min/Med/Max: <code>${formatPrice(minPrice, true)}/${formatPrice(medianPrice, true)}/${formatPrice(maxPrice, true)}</code>`
+      : ''
+
     return `
-${inStockText}<b>${productName}</b>
-💰 <b>${formatPrice(currentPrice)}</b> 
-📊 <code>${trend} ${priceChangeFormatted}</code> от медианы
-📉 Min/Med/Max: <code>${formatPrice(minPrice)}/${formatPrice(medianPrice)}/${formatPrice(maxPrice)}</code>
+${statusIndicator}<b>${productName}</b>
+💰 ${priceDisplay} 
+${additionalInfo ? `${additionalInfo}\n` : ''}${current.inStock ? `📊 ${trendDisplay}\n` : ''}${historyStats}
 <a href="${url}">Открыть в Ozon →</a>
 ${TelegramFormatter.ITEM_SEPARATOR}`
   }

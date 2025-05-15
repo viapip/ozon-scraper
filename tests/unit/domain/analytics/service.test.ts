@@ -74,11 +74,14 @@ describe('analyticsService', () => {
         .toEqual({
           becameAvailable: false,
           becameUnavailable: false,
+          cameBackInStock: false,
           current: product,
           discountFromMedianPercent: -17, // (1000 - 1200) / 1200 * 100 = -16.67, rounded to -17
           maxPrice: history[3], // Price: 1500
           medianPrice: expect.objectContaining({ price: 1200 }), // The median price in our scenario
           minPrice: history[0], // Price: 1000
+          neverInStock: false,
+          wasEverInStock: true,
         })
     })
 
@@ -129,6 +132,61 @@ describe('analyticsService', () => {
       expect(result.becameAvailable)
         .toBe(false)
       expect(result.becameUnavailable)
+        .toBe(true)
+    })
+
+    it('should detect products that have never been in stock', async () => {
+      const productId = 'test123'
+      const product = createProductFixture({
+        id: productId,
+        inStock: false, // Currently out of stock
+        price: 0,
+        timestamp: Date.now(),
+      })
+
+      const history = [
+        { inStock: false, price: 0, productId, timestamp: Date.now() },
+        { inStock: false, price: 0, productId, timestamp: Date.now() - 86400000 }, // Was never in stock
+      ]
+
+      mockProductService.getProduct.mockResolvedValue(product)
+      mockProductService.getProductHistoryByPeriod.mockResolvedValue(history)
+
+      const result = await analyticsService.getPriceAnalytics(productId)
+
+      expect(result.wasEverInStock)
+        .toBe(false)
+      expect(result.neverInStock)
+        .toBe(true)
+      expect(result.discountFromMedianPercent)
+        .toBe(0) // No discount for unavailable products
+    })
+
+    it('should detect products that came back in stock', async () => {
+      const productId = 'test123'
+      const product = createProductFixture({
+        id: productId,
+        inStock: true, // Currently in stock
+        price: 1200,
+        timestamp: Date.now(),
+      })
+
+      const history = [
+        { inStock: true, price: 1200, productId, timestamp: Date.now() },
+        { inStock: false, price: 0, productId, timestamp: Date.now() - 86400000 }, // Was out of stock yesterday
+        { inStock: true, price: 1000, productId, timestamp: Date.now() - (2 * 86400000) }, // Was in stock before
+      ]
+
+      mockProductService.getProduct.mockResolvedValue(product)
+      mockProductService.getProductHistoryByPeriod.mockResolvedValue(history)
+
+      const result = await analyticsService.getPriceAnalytics(productId)
+
+      expect(result.becameAvailable)
+        .toBe(true)
+      expect(result.wasEverInStock)
+        .toBe(true)
+      expect(result.cameBackInStock)
         .toBe(true)
     })
 
@@ -320,7 +378,8 @@ describe('analyticsService', () => {
     it('should skip out-of-stock items for min/max price', () => {
       const history = [
         { inStock: true, price: 1000, productId: 'test', timestamp: 1 },
-        { inStock: false, price: 500, productId: 'test', timestamp: 2 }, // Out of stock, should be skipped
+        { inStock: false, price: 500, productId: 'test', timestamp: 2 }, // Out of stock, but has price, should still be considered
+        { inStock: false, price: 0, productId: 'test', timestamp: 4 }, // Out of stock with price 0, should be skipped
         { inStock: true, price: 1200, productId: 'test', timestamp: 3 },
       ]
 
@@ -330,9 +389,23 @@ describe('analyticsService', () => {
       const maxResult = analyticsService.findExtremePrice(history, 'max')
 
       expect(minResult)
-        .toEqual(history[0]) // Price 1000
+        .toEqual(history[1]) // Price 500 (now considered because it has a valid price)
       expect(maxResult)
-        .toEqual(history[2]) // Price 1200
+        .toEqual(history[3]) // Price 1200
+    })
+
+    it('should skip any zero prices for min/max calculation', () => {
+      const history = [
+        { inStock: true, price: 1000, productId: 'test', timestamp: 1 },
+        { inStock: true, price: 0, productId: 'test', timestamp: 2 }, // Zero price should be skipped even if in stock
+        { inStock: true, price: 1200, productId: 'test', timestamp: 3 },
+      ]
+
+      // @ts-expect-error: Accessing private method for testing
+      const minResult = analyticsService.findExtremePrice(history, 'min')
+
+      expect(minResult)
+        .toEqual(history[0]) // Price 1000, not picking up the zero price
     })
   })
 

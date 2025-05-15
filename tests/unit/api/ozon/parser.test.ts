@@ -130,5 +130,96 @@ describe('ozonParser', () => {
           expect.any(Function),
         )
     })
+
+    it('should mark product as out of stock when indicators are present', () => {
+      // We can test the mapping function directly by mocking the expected DOM structure
+      // and executing the function with it
+      const evalFunction = (mockPage.$$eval as Mock).mock.calls[0][1]
+
+      // Create mock DOM elements that represent out-of-stock products
+      const mockElements = [
+        mockProductElement({
+          price: '0 ₽',
+          text: 'Product Name Похожие', // Contains "Similar" indicator
+        }),
+        mockProductElement({
+          price: '1000 ₽',
+          text: 'Product Name Нет в наличии', // Contains "Out of stock" indicator
+        }),
+        mockProductElement({
+          price: '500 ₽',
+          text: 'Product Name Товар закончился', // Contains "Product sold out" indicator
+        }),
+      ]
+
+      // Execute the mapping function
+      const results = evalFunction(mockElements)
+
+      // All products should be marked as out of stock
+      expect(results[0].inStock)
+        .toBe(false)
+      expect(results[1].inStock)
+        .toBe(false)
+      expect(results[2].inStock)
+        .toBe(false)
+    })
+
+    it('should mark product as in stock when no out-of-stock indicators are present', () => {
+      const evalFunction = (mockPage.$$eval as Mock).mock.calls[0][1]
+
+      // Create mock DOM elements for in-stock products
+      const mockElements = [
+        mockProductElement({
+          price: '1000 ₽',
+          text: 'Product Name', // No out-of-stock indicators
+        }),
+      ]
+
+      // Execute the mapping function
+      const results = evalFunction(mockElements)
+
+      // Product should be marked as in stock
+      expect(results[0].inStock)
+        .toBe(true)
+    })
   })
 })
+
+/**
+ * Helper function to create a mock product element for testing
+ */
+function mockProductElement({ price = '1000 ₽', text = 'Product Name' } = {}) {
+  // Create a simple object that mimics the DOM structure expected by the parser
+  const _priceElement = {
+    textContent: price,
+  }
+
+  const nameElement = {
+    textContent: 'Product Name',
+  }
+
+  const productLink = {
+    getAttribute: () => {
+      return '/product/123456'
+    },
+    querySelector: () => {
+      return nameElement
+    },
+  }
+
+  return {
+    querySelectorAll: (selector: string) => {
+      if (selector === 'a[href*="/product/"]') {
+        return [productLink]
+      }
+
+      return Array.from({ length: 10 })
+        .map(() => {
+          return {
+            textContent: selector.includes('price') ? price : 'text',
+          }
+        })
+    },
+    textContent: text,
+  }
+}

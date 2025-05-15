@@ -23,11 +23,15 @@ export interface PriceHistory {
 export interface ProductAnalytics {
   becameAvailable: boolean
   becameUnavailable: boolean
+  cameBackInStock: boolean // Product became available after being unavailable
   current: Product
   discountFromMedianPercent: number
   maxPrice: PriceHistory
   medianPrice: PriceHistory
   minPrice: PriceHistory
+  neverInStock: boolean // Product was never in stock
+  // New fields for edge cases
+  wasEverInStock: boolean // Product was available at some point in history
 }
 
 export interface ProductListUrl {

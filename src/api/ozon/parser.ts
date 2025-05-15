@@ -59,9 +59,25 @@ export class OzonParser {
         const priceText = priceElements[0]?.textContent || '0 ₽'
         const price = Number.parseFloat(priceText.replace(/[^\d.]/g, ''))
 
-        // Determine stock status (not in stock if price is 0 and "Similar" text exists)
+        // Determine stock status using multiple indicators
         let inStock = true
-        if (price === 0 && item.textContent?.includes('Похожие')) {
+
+        // Check for out-of-stock indicators
+        const itemText = item.textContent || ''
+        const outOfStockIndicators = [
+          'Похожие', // "Similar" items shown
+          'Нет в наличии', // "Out of stock"
+          'Товар закончился', // "Product sold out"
+          'Этот товар больше не продаётся', // "This product is no longer sold"
+          'Товар временно недоступен', // "Product temporarily unavailable"
+        ]
+
+        // Product is considered out of stock if:
+        // 1. Price is 0, OR
+        // 2. Any out-of-stock indicators are present in the item text
+        if (price === 0 || outOfStockIndicators.some((indicator) => {
+          return itemText.includes(indicator)
+        })) {
           inStock = false
         }
 

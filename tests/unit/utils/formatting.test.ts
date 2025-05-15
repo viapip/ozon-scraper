@@ -1,4 +1,4 @@
-import { formatDate, formatDateTimeWithSeconds, formatPrice, formatTimestamp, validateUrl } from '~/utils/formatting'
+import { formatDate, formatDateTimeWithSeconds, formatPrice, formatPriceOrStatus, formatTimestamp, validateUrl } from '~/utils/formatting'
 import { describe, expect, it } from 'vitest'
 
 describe('formatting utilities', () => {
@@ -12,6 +12,30 @@ describe('formatting utilities', () => {
         .toMatch(/^1\s234\s567[,.]89\s₽$/)
       expect(formatPrice(0))
         .toMatch(/^0\s₽$/)
+    })
+
+    it('should handle out-of-stock products', () => {
+      expect(formatPrice(0, false))
+        .toBe('Нет в наличии')
+      expect(formatPrice(1000, false))
+        .toMatch(/^1\s0{3}\s₽$/) // Should show price if non-zero, even if out of stock
+    })
+  })
+
+  describe('formatPriceOrStatus', () => {
+    it('should format price for in-stock products', () => {
+      expect(formatPriceOrStatus(1000, true))
+        .toMatch(/^1\s0{3}\s₽$/)
+    })
+
+    it('should show unavailable message for out-of-stock products', () => {
+      expect(formatPriceOrStatus(0, false))
+        .toBe('Нет в наличии')
+    })
+
+    it('should show special message for never-in-stock products', () => {
+      expect(formatPriceOrStatus(0, false, false))
+        .toBe('Товар никогда не был в наличии')
     })
   })
 

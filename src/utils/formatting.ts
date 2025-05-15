@@ -1,8 +1,33 @@
 /**
  * Format a price as a string with currency symbol
+ * @param price - The price to format
+ * @param inStock - Optional flag indicating if the product is in stock (defaults to true)
  */
-export function formatPrice(price: number): string {
+export function formatPrice(price: number, inStock?: boolean): string {
+  if (inStock === false && price === 0) {
+    return 'Нет в наличии'
+  }
+
   return `${price.toLocaleString('ru-RU')} ₽`
+}
+
+/**
+ * Format a price or status based on availability
+ * @param price - The price to format
+ * @param inStock - Whether the product is in stock
+ * @param wasEverInStock - Whether the product was ever in stock
+ */
+export function formatPriceOrStatus(price: number, inStock: boolean, wasEverInStock?: boolean): string {
+  if (!inStock) {
+    // Product is not in stock
+    if (wasEverInStock === false) {
+      return 'Товар никогда не был в наличии'
+    }
+
+    return 'Нет в наличии'
+  }
+
+  return formatPrice(price)
 }
 
 /**

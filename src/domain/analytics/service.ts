@@ -13,6 +13,16 @@ export class AnalyticsService {
   constructor(private productService: ProductService) {}
 
   /**
+   * Check if a product was ever in stock based on its price history
+   */
+  private wasEverInStock(history: PriceHistory[]): boolean {
+    // Check if any history item has inStock=true
+    return history.some((item) => {
+      return item.inStock
+    })
+  }
+
+  /**
    * Get price analytics for a product
    */
   async getPriceAnalytics(productId: string): Promise<ProductAnalytics> {
@@ -42,27 +52,44 @@ export class AnalyticsService {
       const maxPriceItem = this.findExtremePrice(historyItems, 'max')
       const medianPriceItem = this.calculateMedianPrice(historyItems)
 
+      // Check if product was ever in stock
+      const wasEverInStock = this.wasEverInStock(historyItems)
+
       // Get previous state to check for changes
       const prevHistoryItem = historyItems.length > 1 ? historyItems[1] : historyItems[0]
 
       // Availability change detection
       const becameAvailable = !prevHistoryItem.inStock && product.inStock
+
+      // Special case for products that come back in stock after being unavailable
+      const cameBackInStock = becameAvailable && wasEverInStock
+
       const becameUnavailable = prevHistoryItem.inStock && !product.inStock
 
       // Calculate discount from median price
-      const discountFromMedianPercent = this.calculateDiscountFromMedian(
-        product.price,
-        medianPriceItem.price,
-      )
+      // For out-of-stock products (price 0), we set discount to 0
+      const discountFromMedianPercent = (!product.inStock && product.price === 0)
+        ? 0
+        : this.calculateDiscountFromMedian(
+            product.price,
+            medianPriceItem.price,
+          )
+
+      // Determine if product was never in stock
+      const neverInStock = !wasEverInStock && !product.inStock
 
       return {
         becameAvailable,
         becameUnavailable,
+        cameBackInStock,
         current: product,
         discountFromMedianPercent,
         maxPrice: maxPriceItem,
         medianPrice: medianPriceItem,
         minPrice: minPriceItem,
+        neverInStock,
+        // Include edge case fields
+        wasEverInStock,
       }
     }
     catch (error) {
@@ -143,37 +170,46 @@ export class AnalyticsService {
 
   /**
    * Find the minimum or maximum price in history
+   * Ignores entries with price 0 and inStock:false
    */
   private findExtremePrice(history: PriceHistory[], type: 'max' | 'min'): PriceHistory {
-    return history.reduce((extreme, current) => {
-      // Skip items where product is not available (price is 0)
-      if (!extreme.inStock || !current.inStock) {
-        return current.inStock ? current : extreme
-      }
+    // Filter out unavailable items with price 0 AND items where price is 0 regardless of stock status
+    // We want to ignore ALL zero prices for min/max calculation
+    const validPriceItems = history.filter((item) => {
+      return item.price > 0
+    })
 
+    // If no items available after filtering, return first history item
+    if (validPriceItems.length === 0) {
+      return history[0]
+    }
+
+    return validPriceItems.reduce((extreme, current) => {
       const comparison = type === 'min'
         ? current.price < extreme.price
         : current.price > extreme.price
 
       return comparison ? current : extreme
-    }, history[0])
+    }, validPriceItems[0])
   }
 
   /**
    * Calculate median price from history
+   * Excludes all entries with price 0 from calculations
    */
   private calculateMedianPrice(history: PriceHistory[]): PriceHistory {
-    // Filter out unavailable items (price === 0)
-    const availableItems = history.filter((item) => {
-      return item.inStock && item.price > 0
+    // For median calculation, we'll use only items with prices > 0
+    const validPriceItems = history.filter((item) => {
+      return item.price > 0
     })
 
-    if (availableItems.length === 0) {
-      return history[0] // Return first element if no available items
+    // If no valid items found after filtering, return the first history item
+    if (validPriceItems.length === 0) {
+      return history[0]
     }
 
     // Sort by price
-    const sortedItems = [...availableItems].sort((a, b) => {
+    const sortedItems = [...validPriceItems].sort((a, b) => {
       return a.price - b.price
     })
 
@@ -198,9 +234,11 @@ export class AnalyticsService {
 
   /**
    * Calculate discount from median price as percentage
+   * Returns 0 for out-of-stock products with price 0
    */
   private calculateDiscountFromMedian(currentPrice: number, medianPrice: number): number {
-    if (medianPrice === 0) {
+    // If either price is invalid, return 0
+    if (medianPrice === 0 || currentPrice === 0) {
       return 0
     }
 
