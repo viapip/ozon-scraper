@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.0.6
+
+[compare changes](https://undefined/undefined/compare/v0.0.5...v0.0.6)
+
+### 💅 Refactors
+
+- **telegram:** Improve bot initialization and error handling (2225440)
+
+### ❤️ Contributors
+
+- Aleksandr <starcev.sash@gmail.com>
+
 ## v0.0.5
 
 [compare changes](https://undefined/undefined/compare/v0.0.4...v0.0.5)
