@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.7
+
+[compare changes](https://undefined/undefined/compare/v0.0.6...v0.0.7)
+
+### 💅 Refactors
+
+- Remove coverage (1fa0e96)
+- **telegram:** Improve bot startup logic and error handling (7430a38)
+
+### ❤️ Contributors
+
+- Aleksandr <starcev.sash@gmail.com>
+
 ## v0.0.6
 
 [compare changes](https://undefined/undefined/compare/v0.0.5...v0.0.6)
