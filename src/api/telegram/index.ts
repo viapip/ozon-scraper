@@ -77,26 +77,25 @@ export class TelegramService {
         return this.commandHandler.handleSetThreshold(ctx)
       })
 
-      // Start the bot and properly await its initialization
+      // Start the bot
       logger.info('Starting Telegram bot')
-      try {
-        await this.bot.launch()
-        this.isRunning = true
-        logger.info('Telegram bot started successfully')
 
-        // Verify bot is running by making a simple API call
-        await this.bot.telegram.getMe()
-        logger.info('Telegram bot connection confirmed')
-      }
-      catch (error) {
-        logger.error('Failed to start Telegram bot:', error)
-        this.isRunning = false
-        throw error
-      }
+      this.isRunning = true
+
+      this.bot.launch()
+        .catch((error) => {
+          logger.error('Failed to start Telegram bot:', error)
+          this.isRunning = false
+        })
+
+      // Wait for bot to initialize
+      await new Promise((resolve) => {
+        return setTimeout(resolve, 2000)
+      })
     }
     catch (error) {
       logger.error('Failed to initialize Telegram bot:', error)
-      this.isRunning = false
+      throw error
     }
   }
 
