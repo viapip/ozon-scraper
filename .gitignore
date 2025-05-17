@@ -32,3 +32,4 @@ reports/*
 test-product.*
 
 **/.claude/*
+coverage
