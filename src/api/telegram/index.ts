@@ -77,28 +77,26 @@ export class TelegramService {
         return this.commandHandler.handleSetThreshold(ctx)
       })
 
-      // Removed method injection - now sendProductAnalytics uses ctx parameter
-
-      // Start the bot
+      // Start the bot and properly await its initialization
       logger.info('Starting Telegram bot')
-      this.bot.launch()
-        .then(() => {
-          this.isRunning = true
-          logger.info('Telegram bot started')
-        })
-        .catch((error) => {
-          logger.error('Failed to start Telegram bot:', error)
-          this.isRunning = false
-        })
+      try {
+        await this.bot.launch()
+        this.isRunning = true
+        logger.info('Telegram bot started successfully')
 
-      // Wait for bot to initialize
-      await new Promise((resolve) => {
-        return setTimeout(resolve, 2000)
-      })
+        // Verify bot is running by making a simple API call
+        await this.bot.telegram.getMe()
+        logger.info('Telegram bot connection confirmed')
+      }
+      catch (error) {
+        logger.error('Failed to start Telegram bot:', error)
+        this.isRunning = false
+        throw error
+      }
     }
     catch (error) {
       logger.error('Failed to initialize Telegram bot:', error)
-      throw error
+      this.isRunning = false
     }
   }
 
