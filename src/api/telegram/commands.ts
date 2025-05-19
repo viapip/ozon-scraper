@@ -337,6 +337,22 @@ export class TelegramCommandHandler {
   }
 
   /**
+   * Handle the /help command
+   */
+  async handleHelp(ctx: Context): Promise<void> {
+    try {
+      const helpMessage = this.formatter.formatHelpMessage()
+      await ctx.reply(helpMessage, {
+        parse_mode: 'Markdown',
+      })
+    }
+    catch (error) {
+      logger.error('Error handling help command:', error)
+      await ctx.reply('Произошла ошибка при выполнении команды помощи.')
+    }
+  }
+
+  /**
    * Send product analytics to a user
    */
   async sendProductAnalytics(ctx: Context, chatId: string, analytics: ProductAnalytics[], batchSize = 10): Promise<void> {
