@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.1.1
+
+[compare changes](https://undefined/undefined/compare/v0.0.7...v0.1.1)
+
+### 🚀 Enhancements
+
+- Add configurable notification frequency settings (c96eeab)
+- **telegram:** Add /help command and improve welcome messages (747d46e)
+
+### 🏡 Chore
+
+- **package.json:** Add --fix flag to lint script to automatically fix linting issues (ef4ae6a)
+
+### ❤️ Contributors
+
+- Aleksandr <starcev.sash@gmail.com>
+
 ## v0.0.7
 
 [compare changes](https://undefined/undefined/compare/v0.0.6...v0.0.7)
