@@ -76,6 +76,9 @@ export class TelegramService {
       this.bot.command('setthreshold', (ctx) => {
         return this.commandHandler.handleSetThreshold(ctx)
       })
+      this.bot.command('setfrequency', (ctx) => {
+        return this.commandHandler.handleSetFrequency(ctx)
+      })
 
       // Start the bot
       logger.info('Starting Telegram bot')

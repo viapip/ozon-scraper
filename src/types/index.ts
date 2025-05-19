@@ -44,12 +44,24 @@ export interface UserProductAnalytics extends ProductAnalytics {
   chatId: string
 }
 
+export interface NotificationFrequency {
+  hoursBetweenNotifications?: number // For custom frequency
+  type: 'custom' | 'daily' | 'immediate' | 'weekly'
+}
+
+export interface LastNotification {
+  discountPercent: number
+  timestamp: number
+}
+
 export interface User {
   chatId: string
   createdAt: number
   favoriteListId?: string
   isActive: boolean
   lastActivityAt: number
+  lastNotifications?: Record<string, LastNotification> // productId -> notification data
+  notificationFrequency?: NotificationFrequency
   notificationThreshold?: number
   products: string[]
 }

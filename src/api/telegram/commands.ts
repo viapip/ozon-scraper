@@ -1,6 +1,6 @@
 import type { Context, MiddlewareFn } from 'telegraf'
 
-import type { ProductAnalytics, User } from '../../types'
+import type { NotificationFrequency, ProductAnalytics, User } from '../../types'
 
 import { validateUrl } from '../../utils/formatting'
 import { createLogger } from '../../utils/logger'
@@ -16,6 +16,7 @@ export interface CommandHandlerDependencies {
   getUser: (chatId: string) => Promise<null | User>
   setActive: (chatId: string, isActive: boolean) => Promise<void>
   setFavoriteList: (chatId: string, url: string) => Promise<string>
+  setNotificationFrequency: (chatId: string, frequency: NotificationFrequency) => Promise<void>
   setNotificationThreshold: (chatId: string, threshold: number) => Promise<void>
 }
 
@@ -257,6 +258,81 @@ export class TelegramCommandHandler {
     catch (error) {
       logger.error(`Failed to set notification threshold for user ${chatId}:`, error)
       await ctx.reply('Не удалось установить порог уведомлений. Пожалуйста, попробуйте снова позже.')
+    }
+  }
+
+  /**
+   * Handle the /setfrequency command
+   */
+  async handleSetFrequency(ctx: Context): Promise<void> {
+    if (!ctx.chat || !ctx.message || !('text' in ctx.message)) {
+      return
+    }
+
+    const chatId = String(ctx.chat.id)
+    const message = ctx.message.text || ''
+
+    // Parse frequency type and optional hours
+    const parts = message.split(' ')
+    if (parts.length < 2) {
+      await ctx.reply('Неверный формат команды. Пример: /setfrequency daily')
+
+      return
+    }
+
+    const type = parts[1] as 'custom' | 'daily' | 'immediate' | 'weekly'
+    if (![
+      'custom',
+      'daily',
+      'immediate',
+      'weekly',
+    ].includes(type)) {
+      await ctx.reply('Неверный тип частоты. Доступные варианты: immediate, daily, weekly, custom')
+
+      return
+    }
+
+    const frequency: NotificationFrequency = { type }
+
+    // Handle custom frequency with hours
+    if (type === 'custom' && parts.length > 2) {
+      const hours = Number.parseInt(parts[2], 10)
+      if (!Number.isNaN(hours) && hours > 0) {
+        frequency.hoursBetweenNotifications = hours
+      }
+      else {
+        await ctx.reply('Неверное значение часов для частоты. Пример: /setfrequency custom 12')
+
+        return
+      }
+    }
+
+    try {
+      // Update user settings
+      await this.dependencies.setNotificationFrequency(chatId, frequency)
+
+      // Reply with confirmation
+      let replyMessage = ''
+      switch (type) {
+        case 'custom':
+          replyMessage = `Уведомления будут приходить не чаще раза в ${frequency.hoursBetweenNotifications} часов, если скидка не увеличилась.`
+          break
+        case 'daily':
+          replyMessage = 'Уведомления будут приходить не чаще раза в день, если скидка не увеличилась.'
+          break
+        case 'immediate':
+          replyMessage = 'Уведомления будут приходить сразу при любых изменениях.'
+          break
+        case 'weekly':
+          replyMessage = 'Уведомления будут приходить не чаще раза в неделю, если скидка не увеличилась.'
+          break
+      }
+
+      await ctx.reply(replyMessage)
+    }
+    catch (error) {
+      logger.error('Error handling set notification frequency:', error)
+      await ctx.reply('Произошла ошибка при установке частоты уведомлений.')
     }
   }
 

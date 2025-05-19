@@ -1,4 +1,4 @@
-import type { User } from '../../types/index'
+import type { LastNotification, NotificationFrequency, User } from '../../types/index'
 
 import { createLogger } from '../../utils/logger'
 import { UserRepository } from './repository'
@@ -125,6 +125,48 @@ export class UserService {
    */
   async setNotificationThreshold(chatId: string, threshold: number): Promise<null | User> {
     return this.updateUser(chatId, { notificationThreshold: threshold })
+  }
+
+  /**
+   * Set a user's notification frequency
+   */
+  async setNotificationFrequency(chatId: string, frequency: NotificationFrequency): Promise<null | User> {
+    return this.updateUser(chatId, { notificationFrequency: frequency })
+  }
+
+  /**
+   * Update the last notification for a product
+   */
+  async updateLastNotification(chatId: string, productId: string, notification: LastNotification): Promise<null | User> {
+    const user = await this.getUser(chatId)
+
+    if (!user) {
+      logger.warn(`User ${chatId} not found`)
+
+      return null
+    }
+
+    const lastNotifications = user.lastNotifications || {}
+
+    return this.updateUser(chatId, {
+      lastNotifications: {
+        ...lastNotifications,
+        [productId]: notification,
+      },
+    })
+  }
+
+  /**
+   * Get the last notification for a product
+   */
+  async getLastNotification(chatId: string, productId: string): Promise<LastNotification | undefined> {
+    const user = await this.getUser(chatId)
+
+    if (!user || !user.lastNotifications) {
+      return undefined
+    }
+
+    return user.lastNotifications[productId]
   }
 
   /**

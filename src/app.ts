@@ -5,6 +5,7 @@ import { OzonService } from './api/ozon/index'
 import { TelegramService } from './api/telegram/index'
 import { config } from './config/index'
 import { AnalyticsService } from './domain/analytics/index'
+import { NotificationRulesService } from './domain/notifications/index'
 import { ProductService } from './domain/products/index'
 import { UserService } from './domain/users/index'
 import { SchedulerService } from './infrastructure/scheduler/index'
@@ -19,6 +20,7 @@ const logger = createLogger('App')
  */
 export class App {
   private analyticsService!: AnalyticsService
+  private notificationRulesService!: NotificationRulesService
   private ozonService!: OzonService
   private productService!: ProductService
   private reportService!: ReportService
@@ -42,6 +44,7 @@ export class App {
     this.productService = new ProductService()
     this.userService = new UserService()
     this.analyticsService = new AnalyticsService(this.productService)
+    this.notificationRulesService = new NotificationRulesService()
     this.reportService = new ReportService()
 
     logger.info('Domain services initialized')
@@ -107,6 +110,11 @@ export class App {
       setNotificationThreshold: async (chatId: string, threshold: number) => {
         logger.info(`Setting notification threshold for user ${chatId} to ${threshold}%`)
         await this.userService.setNotificationThreshold(chatId, threshold)
+      },
+
+      setNotificationFrequency: async (chatId: string, frequency) => {
+        logger.info(`Setting notification frequency for user ${chatId} to ${frequency.type}`)
+        await this.userService.setNotificationFrequency(chatId, frequency)
       },
     }
 
@@ -207,9 +215,32 @@ export class App {
             }
           }
 
-          // Send notifications if there are changes
-          if (changedProducts.length > 0) {
-            await this.telegramService.sendAnalytics(chatId, changedProducts)
+          // Filter products based on notification rules
+          const productsToNotify: ProductAnalytics[] = []
+
+          for (const analytics of changedProducts) {
+            const productId = analytics.current.id
+
+            // Check if notification should be sent based on rules
+            if (this.notificationRulesService.shouldSendNotification(user, productId, analytics)) {
+              productsToNotify.push(analytics)
+
+              // Update notification history
+              await this.userService.updateLastNotification(
+                chatId,
+                productId,
+                {
+                  discountPercent: -analytics.discountFromMedianPercent,
+                  timestamp: Date.now(),
+                },
+              )
+            }
+          }
+
+          // Send notifications if there are changes that pass the rules
+          if (productsToNotify.length > 0) {
+            logger.info(`Sending notifications for ${productsToNotify.length} products to user ${chatId}`)
+            await this.telegramService.sendAnalytics(chatId, productsToNotify)
           }
         }
         catch (error) {
