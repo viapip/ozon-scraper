@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.2
+
+[compare changes](https://undefined/undefined/compare/v0.1.1...v0.1.2)
+
+### 🩹 Fixes
+
+- Improve product name extraction and handling of missing names (942202f)
+
+### ❤️ Contributors
+
+- Aleksandr <starcev.sash@gmail.com>
+
 ## v0.1.1
 
 [compare changes](https://undefined/undefined/compare/v0.0.7...v0.1.1)
