@@ -33,14 +33,19 @@ export class TelegramFormatter {
    * Format a product analytics message
    */
   formatAnalyticsMessage(analytics: ProductAnalytics): string {
-    const { name, price: currentPrice, url } = analytics.current
+    const { id, name, price: currentPrice, url } = analytics.current
     const { price: minPrice } = analytics.minPrice
     const { price: maxPrice } = analytics.maxPrice
     const { price: medianPrice } = analytics.medianPrice
 
     const trend = this.getPriceTrendSymbol(analytics.discountFromMedianPercent)
     const priceChangeFormatted = this.formatPriceChange(analytics.discountFromMedianPercent)
-    const [productName] = name.split(',')
+
+    // Extract product name, providing a fallback for empty names
+    const [rawProductName] = name.split(',')
+    const productName = rawProductName?.trim()
+      ? rawProductName
+      : 'Товар без названия' // Fallback name: "Product without a name"
 
     // Status indicators
     let statusIndicator = ''
@@ -92,8 +97,11 @@ export class TelegramFormatter {
       ? `📉 Min/Med/Max: <code>${formatPrice(minPrice, true)}/${formatPrice(medianPrice, true)}/${formatPrice(maxPrice, true)}</code>`
       : ''
 
+    // Add product ID in case name is missing (helps with identification)
+    const productIdDisplay = !rawProductName?.trim() ? `(ID: ${id})` : ''
+
     return `
-${statusIndicator}<b>${productName}</b>
+${statusIndicator}<b>${productName}</b> ${productIdDisplay}
 💰 ${priceDisplay} 
 ${additionalInfo ? `${additionalInfo}\n` : ''}${current.inStock ? `📊 ${trendDisplay}\n` : ''}${historyStats}
 <a href="${url}">Открыть в Ozon →</a>

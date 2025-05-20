@@ -36,15 +36,43 @@ export class OzonParser {
 
     return await page.$$eval('div[data-widget="tileGridDesktop"] .tile-root', (elements) => {
       return elements.map((item) => {
-      // Find all product links and use the last one (most specific)
+        // Find all product links and use the last one (most specific)
         const productLinks = Array.from(item.querySelectorAll('a[href*="/product/"]'))
         const mainProductLink = productLinks[productLinks.length - 1] as HTMLAnchorElement
-
-        const nameElement = mainProductLink?.querySelector('span')
 
         // Construct full URL and extract product ID
         const url = window.location.origin + mainProductLink?.getAttribute('href') || ''
         const id = url.match(/\/product\/([^/?]+)/)?.[1] || ''
+
+        // Improved product name extraction with multiple fallback strategies
+        let productName = ''
+
+        // Strategy 1: Try to get name from span in mainProductLink (original method)
+        const nameElement = mainProductLink?.querySelector('span')
+        if (nameElement?.textContent?.trim()) {
+          productName = nameElement.textContent.trim()
+        }
+
+        // Strategy 2: If no name found, try to look for product title in the item
+        if (!productName) {
+          // Look for elements that might contain product titles (common class names or attributes)
+          const possibleTitleElements = Array.from(item.querySelectorAll(
+            '[class*="title"], [class*="name"], [data-widget*="webTitle"], h3, h4, h5, .tsBody500Medium',
+          ))
+
+          // Find the first element with text content
+          for (const el of possibleTitleElements) {
+            if (el.textContent?.trim()) {
+              productName = el.textContent.trim()
+              break
+            }
+          }
+        }
+
+        // Strategy 3: If still no name, try to get any text from the main product link
+        if (!productName && mainProductLink?.textContent?.trim()) {
+          productName = mainProductLink.textContent.trim()
+        }
 
         // Find price elements using a regex to match price format
         const allTextElements = Array.from(item.querySelectorAll('*'))
@@ -84,7 +112,7 @@ export class OzonParser {
         return {
           id,
           inStock,
-          name: nameElement?.textContent?.trim() || '',
+          name: productName || `Товар ${id}`, // Default name with ID if all extraction methods fail
           price,
           timestamp: new Date()
             .getTime(),
